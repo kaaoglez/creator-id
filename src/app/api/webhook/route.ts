@@ -28,8 +28,7 @@ export async function POST(req: Request) {
       
       const workId = session.metadata?.work_id
       const buyerName = session.metadata?.buyer_name
-      // 👇 SOLUCIÓN TEMPORAL: Usar tu email verificado en lugar del del comprador
-      const buyerEmail = 'kaaoglez@gmail.com' // TU EMAIL VERIFICADO EN RESEND
+      const buyerEmail = session.customer_email || session.metadata?.buyer_email
 
       console.log('📦 Metadata:', { workId, buyerName, buyerEmail })
 
@@ -41,10 +40,10 @@ export async function POST(req: Request) {
       const supabase = await createClient()
       console.log('✅ Cliente Supabase creado')
 
-      // Obtener datos de la obra
+      // Obtener datos completos de la obra
       const { data: work, error: workError } = await supabase
         .from('works')
-        .select('title, file_url, price')
+        .select('*, creators(creator_id, email)')
         .eq('id', workId)
         .single()
 
@@ -53,24 +52,68 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Work not found' }, { status: 404 })
       }
 
-      console.log('📎 Obra encontrada:', { title: work.title, file_url: work.file_url })
+      console.log('📎 Obra encontrada:', { 
+        title: work.title, 
+        file_url: work.file_url,
+        creator_id: work.creator_id 
+      })
 
-      // Actualizar la compra
-      const { error: updateError } = await supabase
+      // Calcular comisiones
+      const amount = work.price || 0
+      const platformFee = amount * 0.25
+      const creatorEarnings = amount * 0.75
+
+      // Buscar si ya existe la compra
+      const { data: existingPurchase } = await supabase
         .from('purchases')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          stripe_payment_intent_id: session.payment_intent as string,
-        })
+        .select('id')
         .eq('stripe_session_id', session.id)
+        .single()
 
-      if (updateError) {
-        console.log('❌ Error al actualizar:', updateError)
-        return NextResponse.json({ error: 'Update failed' }, { status: 500 })
+      let result
+
+      if (existingPurchase) {
+        // Actualizar compra existente
+        console.log('🔄 Actualizando compra existente:', existingPurchase.id)
+        result = await supabase
+          .from('purchases')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            stripe_payment_intent_id: session.payment_intent as string,
+            creator_id: work.creator_id,
+            work_title: work.title,
+            platform_fee: platformFee,
+            creator_earnings: creatorEarnings
+          })
+          .eq('stripe_session_id', session.id)
+      } else {
+        // Insertar nueva compra
+        console.log('➕ Insertando nueva compra')
+        result = await supabase
+          .from('purchases')
+          .insert({
+            work_id: parseInt(workId),
+            buyer_name: buyerName || 'Cliente',
+            buyer_email: buyerEmail,
+            amount: amount,
+            status: 'completed',
+            stripe_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent as string,
+            completed_at: new Date().toISOString(),
+            creator_id: work.creator_id,
+            work_title: work.title,
+            platform_fee: platformFee,
+            creator_earnings: creatorEarnings
+          })
       }
 
-      console.log('✅ Compra actualizada correctamente')
+      if (result.error) {
+        console.log('❌ Error en base de datos:', result.error)
+        return NextResponse.json({ error: 'Database error' }, { status: 500 })
+      }
+
+      console.log('✅ Compra registrada/actualizada correctamente')
 
       // Enviar email de confirmación
       if (work.file_url) {
@@ -81,7 +124,7 @@ export async function POST(req: Request) {
           buyerName: buyerName || 'Cliente',
           workTitle: work.title,
           downloadUrl: work.file_url,
-          amount: work.price || 0
+          amount: amount
         })
 
         console.log('📧 Resultado del envío:', emailResult)
