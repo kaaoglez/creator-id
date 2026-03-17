@@ -115,83 +115,114 @@ export default function ProfilePage() {
   })
 
   // Query para estadísticas de ventas
-  const { data: salesStats, isLoading: loadingSales } = useQuery({
-    queryKey: ['sales', creatorData?.creator_id],
-    queryFn: async () => {
-      if (!creatorData?.creator_id) return null
+const { data: salesStats, isLoading: loadingSales } = useQuery({
+  queryKey: ['sales', creatorData?.creator_id],
+  queryFn: async () => {
+    if (!creatorData?.creator_id) return null
 
-      const { data: purchases, error } = await supabase
-        .from('purchases')
-        .select('*')
-        .eq('creator_id', creatorData.creator_id)
-        .eq('status', 'completed')
-        .order('created_at', { ascending: false })
+    console.log('💰 Buscando ventas para creator:', creatorData.creator_id)
 
-      if (error) {
-        console.error('❌ Error cargando ventas:', error)
-        return null
+    // Obtener todas las compras completadas del creador
+    const { data: purchases, error } = await supabase
+      .from('purchases')
+      .select('*')
+      .eq('creator_id', creatorData.creator_id)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('❌ Error cargando ventas:', error)
+      return null
+    }
+
+    console.log('📦 Ventas encontradas:', purchases?.length || 0)
+
+    // Si no hay ventas, devolver estructura vacía
+    if (!purchases || purchases.length === 0) {
+      return {
+        totalSales: 0,
+        totalRevenue: 0,
+        platformFees: 0,
+        creatorEarnings: 0,
+        salesByWork: [],
+        monthlySales: [],
+        recentSales: []
       }
+    }
 
-      const totalSales = purchases?.length || 0
-      const totalRevenue = purchases?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
-      const platformFees = purchases?.reduce((sum, p) => sum + (p.amount * 0.25), 0) || 0
-      const creatorEarnings = purchases?.reduce((sum, p) => sum + (p.amount * 0.75), 0) || 0
+    // Calcular estadísticas (con valores por defecto)
+    const totalSales = purchases.length
+    const totalRevenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0)
+    
+    // Usar platform_fee si existe, si no calcularlo
+    const platformFees = purchases.reduce((sum, p) => 
+      sum + (p.platform_fee || (p.amount * 0.25) || 0), 0)
+    
+    const creatorEarnings = purchases.reduce((sum, p) => 
+      sum + (p.creator_earnings || (p.amount * 0.75) || 0), 0)
 
-      const salesByWork = purchases?.reduce((acc: any, p) => {
-        const workId = p.work_id
-        if (!acc[workId]) {
-          acc[workId] = {
-            work_id: workId,
-            work_title: p.work_title || 'Obra sin título',
-            count: 0,
-            revenue: 0
-          }
-        }
-        acc[workId].count += 1
-        acc[workId].revenue += p.amount || 0
-        return acc
-      }, {})
-
-      const last6Months = []
-      const now = new Date()
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-        const monthStr = date.toLocaleDateString('es', { month: 'short', year: 'numeric' })
-        
-        const monthPurchases = purchases?.filter(p => {
-          const pDate = new Date(p.created_at)
-          return pDate.getMonth() === date.getMonth() && 
-                 pDate.getFullYear() === date.getFullYear()
-        }) || []
-
-        last6Months.push({
-          month: monthStr,
-          sales: monthPurchases.length,
-          revenue: monthPurchases.reduce((sum, p) => sum + (p.amount || 0), 0)
+    // Ventas por obra (agrupando por work_id)
+    const salesByWorkMap = new Map()
+    
+    purchases.forEach(p => {
+      const workId = p.work_id
+      if (!salesByWorkMap.has(workId)) {
+        salesByWorkMap.set(workId, {
+          work_id: workId,
+          work_title: p.work_title || 'Obra sin título',
+          count: 0,
+          revenue: 0
         })
       }
+      const work = salesByWorkMap.get(workId)
+      work.count += 1
+      work.revenue += p.amount || 0
+    })
+    
+    const salesByWork = Array.from(salesByWorkMap.values())
 
-      const recentSales = purchases?.slice(0, 5).map(p => ({
-        id: p.id,
-        work_title: p.work_title || 'Obra sin título',
-        amount: p.amount,
-        buyer_email: p.buyer_email,
-        created_at: p.created_at
-      })) || []
+    // Ventas por mes (últimos 6 meses)
+    const last6Months = []
+    const now = new Date()
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthStr = date.toLocaleDateString('es', { month: 'short', year: 'numeric' })
+      
+      const monthPurchases = purchases.filter(p => {
+        const pDate = new Date(p.created_at)
+        return pDate.getMonth() === date.getMonth() && 
+               pDate.getFullYear() === date.getFullYear()
+      })
 
-      return {
-        totalSales,
-        totalRevenue,
-        platformFees,
-        creatorEarnings,
-        salesByWork: Object.values(salesByWork || {}),
-        monthlySales: last6Months,
-        recentSales
-      }
-    },
-    enabled: !!creatorData?.creator_id,
-    staleTime: 2 * 60 * 1000,
-  })
+      last6Months.push({
+        month: monthStr,
+        sales: monthPurchases.length,
+        revenue: monthPurchases.reduce((sum, p) => sum + (p.amount || 0), 0)
+      })
+    }
+
+    // Últimas 5 ventas
+    const recentSales = purchases.slice(0, 5).map(p => ({
+      id: p.id,
+      work_title: p.work_title || 'Obra sin título',
+      amount: p.amount,
+      buyer_email: p.buyer_email,
+      created_at: p.created_at
+    }))
+
+    return {
+      totalSales,
+      totalRevenue,
+      platformFees,
+      creatorEarnings,
+      salesByWork,
+      monthlySales: last6Months,
+      recentSales
+    }
+  },
+  enabled: !!creatorData?.creator_id,
+  staleTime: 2 * 60 * 1000,
+})
 
   // Mutación para eliminar obra
   const deleteWorkMutation = useMutation({
