@@ -564,185 +564,185 @@ export default function ProfilePage() {
       </div>
 
       {/* 📊 ESTADÍSTICAS DE VENTAS */}
-      {loadingSales ? (
-        <div style={{ textAlign: 'center', padding: '20px' }}>{t.search?.searching || 'Cargando...'}</div>
-      ) : salesStats && salesStats.totalSales > 0 ? (
-        <div style={{
-          background: 'white',
-          padding: '20px',
-          marginBottom: '30px',
-          border: '1px solid #eaeaea'
-        }}>
-          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{salesText.title}</h3>
-          
-          {/* Tarjetas de resumen */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '15px',
-            marginBottom: '25px'
-          }}>
-            <div style={{
-              background: '#f0f7ff',
-              padding: '15px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
-                {salesStats.totalSales}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.totalSales}</div>
-            </div>
-            
-            <div style={{
-              background: '#f0f7ff',
-              padding: '15px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
-                ${salesStats.totalRevenue.toFixed(2)}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.grossRevenue}</div>
-            </div>
-            
-            <div style={{
-              background: '#fff5f5',
-              padding: '15px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc2626' }}>
-                ${salesStats.platformFees.toFixed(2)}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.platformFee}</div>
-            </div>
-            
-            <div style={{
-              background: '#e8f5e8',
-              padding: '15px',
-              textAlign: 'center'
-            }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2e7d32' }}>
-                ${salesStats.creatorEarnings.toFixed(2)}
-              </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.earnings}</div>
-            </div>
-          </div>
-
-          {/* Ventas por obra */}
-          {salesStats.salesByWork.length > 0 && (
-            <>
-              <h4 style={{ marginBottom: '15px' }}>{salesText.byWork}</h4>
-              <div style={{ display: 'grid', gap: '10px', marginBottom: '25px' }}>
-                {salesStats.salesByWork
-                  .sort((a: any, b: any) => b.revenue - a.revenue)
-                  .map((work: any) => (
-                    <div key={work.work_id} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '10px',
-                      background: '#f9f9f9'
-                    }}>
-                      <span>{work.work_title}</span>
-                      <div>
-                        <span style={{
-                          background: '#4f46e5',
-                          color: 'white',
-                          padding: '2px 8px',
-                          fontSize: '0.8rem',
-                          marginRight: '8px'
-                        }}>
-                          {work.count} {work.count === 1 ? salesText.sale : salesText.sales}
-                        </span>
-                        <span style={{
-                          background: '#10b981',
-                          color: 'white',
-                          padding: '2px 8px',
-                          fontSize: '0.8rem'
-                        }}>
-                          ${work.revenue.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </>
-          )}
-
-          {/* Ventas mensuales */}
-          {salesStats.monthlySales.length > 0 && (
-            <>
-              <h4 style={{ marginBottom: '15px' }}>{salesText.byMonth}</h4>
-              <div style={{ display: 'grid', gap: '10px', marginBottom: '25px' }}>
-                {salesStats.monthlySales.map((month: any) => (
-                  <div key={month.month} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '10px',
-                    background: '#f9f9f9'
-                  }}>
-                    <span style={{ fontWeight: 'bold' }}>{month.month}</span>
-                    <div>
-                      <span style={{
-                        background: '#4f46e5',
-                        color: 'white',
-                        padding: '2px 8px',
-                        fontSize: '0.8rem',
-                        marginRight: '8px'
-                      }}>
-                        {month.sales} {month.sales === 1 ? salesText.sale : salesText.sales}
-                      </span>
-                      <span style={{
-                        background: '#10b981',
-                        color: 'white',
-                        padding: '2px 8px',
-                        fontSize: '0.8rem'
-                      }}>
-                        ${month.revenue.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Últimas ventas */}
-          {salesStats.recentSales.length > 0 && (
-            <>
-              <h4 style={{ marginBottom: '15px' }}>{salesText.recent}</h4>
-              <div style={{ display: 'grid', gap: '10px' }}>
-                {salesStats.recentSales.map((sale: any) => (
-                  <div key={sale.id} style={{
-                    padding: '10px',
-                    background: '#f9f9f9'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                      <span style={{ fontWeight: 'bold' }}>{sale.work_title}</span>
-                      <span style={{ color: '#2e7d32', fontWeight: 'bold' }}>${sale.amount}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#666' }}>
-                      <span>{salesText.buyer}: {sale.buyer_email}</span>
-                      <span>{new Date(sale.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+{loadingSales ? (
+  <div style={{ textAlign: 'center', padding: '20px' }}>{t.search?.searching || 'Cargando...'}</div>
+) : salesStats && salesStats.totalSales > 0 ? (
+  <div style={{
+    background: 'white',
+    padding: '20px',
+    marginBottom: '30px',
+    border: '1px solid #eaeaea'
+  }}>
+    <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{salesText.title}</h3>
+    
+    {/* Tarjetas de resumen */}
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      gap: '15px',
+      marginBottom: '25px'
+    }}>
+      <div style={{
+        background: '#f0f7ff',
+        padding: '15px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
+          {salesStats.totalSales}
         </div>
-      ) : (
-        <div style={{
-          background: 'white',
-          padding: '20px',
-          marginBottom: '30px',
-          border: '1px solid #eaeaea',
-          textAlign: 'center'
-        }}>
-          <h3 style={{ marginTop: 0, marginBottom: '10px' }}>{salesText.title}</h3>
-          <p style={{ color: '#666' }}>{salesText.noSales}</p>
+        <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.totalSales}</div>
+      </div>
+      
+      <div style={{
+        background: '#f0f7ff',
+        padding: '15px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
+          ${salesStats.totalRevenue.toFixed(2)}
         </div>
-      )}
+        <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.grossRevenue}</div>
+      </div>
+      
+      <div style={{
+        background: '#fff5f5',
+        padding: '15px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc2626' }}>
+          ${salesStats.platformFees.toFixed(2)}
+        </div>
+        <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.platformFee}</div>
+      </div>
+      
+      <div style={{
+        background: '#e8f5e8',
+        padding: '15px',
+        textAlign: 'center'
+      }}>
+        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2e7d32' }}>
+          ${salesStats.creatorEarnings.toFixed(2)}
+        </div>
+        <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.earnings}</div>
+      </div>
+    </div>
+
+    {/* Ventas por obra */}
+    {salesStats.salesByWork && salesStats.salesByWork.length > 0 && (
+      <>
+        <h4 style={{ marginBottom: '15px' }}>{salesText.byWork}</h4>
+        <div style={{ display: 'grid', gap: '10px', marginBottom: '25px' }}>
+          {salesStats.salesByWork
+            .sort((a: any, b: any) => b.revenue - a.revenue)
+            .map((work: any) => (
+              <div key={work.work_id} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '10px',
+                background: '#f9f9f9'
+              }}>
+                <span style={{ fontWeight: 500 }}>{work.work_title}</span>
+                <div>
+                  <span style={{
+                    background: '#4f46e5',
+                    color: 'white',
+                    padding: '2px 8px',
+                    fontSize: '0.8rem',
+                    marginRight: '8px'
+                  }}>
+                    {work.count} {work.count === 1 ? salesText.sale : salesText.sales}
+                  </span>
+                  <span style={{
+                    background: '#10b981',
+                    color: 'white',
+                    padding: '2px 8px',
+                    fontSize: '0.8rem'
+                  }}>
+                    ${work.revenue.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))}
+        </div>
+      </>
+    )}
+
+    {/* Ventas mensuales */}
+    {salesStats.monthlySales && salesStats.monthlySales.length > 0 && (
+      <>
+        <h4 style={{ marginBottom: '15px' }}>{salesText.byMonth}</h4>
+        <div style={{ display: 'grid', gap: '10px', marginBottom: '25px' }}>
+          {salesStats.monthlySales.map((month: any) => (
+            <div key={month.month} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px',
+              background: '#f9f9f9'
+            }}>
+              <span style={{ fontWeight: 'bold' }}>{month.month}</span>
+              <div>
+                <span style={{
+                  background: '#4f46e5',
+                  color: 'white',
+                  padding: '2px 8px',
+                  fontSize: '0.8rem',
+                  marginRight: '8px'
+                }}>
+                  {month.sales} {month.sales === 1 ? salesText.sale : salesText.sales}
+                </span>
+                <span style={{
+                  background: '#10b981',
+                  color: 'white',
+                  padding: '2px 8px',
+                  fontSize: '0.8rem'
+                }}>
+                  ${month.revenue.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    )}
+
+    {/* Últimas ventas */}
+    {salesStats.recentSales && salesStats.recentSales.length > 0 && (
+      <>
+        <h4 style={{ marginBottom: '15px' }}>{salesText.recent}</h4>
+        <div style={{ display: 'grid', gap: '10px' }}>
+          {salesStats.recentSales.map((sale: any) => (
+            <div key={sale.id} style={{
+              padding: '10px',
+              background: '#f9f9f9'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                <span style={{ fontWeight: 'bold' }}>{sale.work_title}</span>
+                <span style={{ color: '#2e7d32', fontWeight: 'bold' }}>${sale.amount?.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#666' }}>
+                <span>{salesText.buyer}: {sale.buyer_email}</span>
+                <span>{new Date(sale.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    )}
+  </div>
+) : (
+  <div style={{
+    background: 'white',
+    padding: '20px',
+    marginBottom: '30px',
+    border: '1px solid #eaeaea',
+    textAlign: 'center'
+  }}>
+    <h3 style={{ marginTop: 0, marginBottom: '10px' }}>{salesText.title}</h3>
+    <p style={{ color: '#666' }}>{salesText.noSales}</p>
+  </div>
+)}
 
       {/* Acciones rápidas */}
       <div style={{
