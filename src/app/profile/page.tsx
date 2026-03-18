@@ -565,7 +565,7 @@ const deleteAccountMutation = useMutation({
         </div>
       </div>
 
-      {/* Información del creador */}
+                   {/* Información del creador */}
       <div style={{
         border: '1px solid #eaeaea',
         padding: '25px',
@@ -579,24 +579,38 @@ const deleteAccountMutation = useMutation({
         </h2>
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-          <div>
+          {/* Fila 1: Nombre completo (ocupa 2 columnas) */}
+          <div style={{ gridColumn: '1 / -1' }}>
             <strong>{t.profile?.personalInfo || 'Nombre completo'}:</strong> {fullName}
           </div>
+          
+          {/* Fila 2: Email y País */}
           <div>
             <strong>Email:</strong> {creatorData.email}
           </div>
-          {/* Mostrar teléfono si existe */}
-          {creatorData.phone && (
-            <div>
-              <strong>Teléfono:</strong> {creatorData.phone}
-            </div>
-          )}
+          
           <div>
             <strong>{t.work?.country || 'País'}:</strong> {creatorData.country_name} ({creatorData.country_code})
           </div>
-          <div>
-            <strong>Región:</strong> {creatorData.region}
-          </div>
+          
+          {/* Fila 3: Teléfono (si existe) y Región */}
+          {creatorData.phone ? (
+            <>
+              <div>
+                <strong>Teléfono:</strong> {creatorData.phone}
+              </div>
+              <div>
+                <strong>Región:</strong> {creatorData.region}
+              </div>
+            </>
+          ) : (
+            <>
+              <div></div> {/* Celda vacía para teléfono */}
+              <div>
+                <strong>Región:</strong> {creatorData.region}
+              </div>
+            </>
+          )}
         </div>
 
         <div style={{
