@@ -20,25 +20,25 @@ export default function ProfilePage() {
   const { t, language } = useLanguage()
 
   // Textos de ventas con fallback
- const salesText = t.profile?.sales || {
-  title: "💰 Estadísticas de Ventas",
-  totalSales: "Ventas totales",
-  completedSales: "Completadas",
-  pendingSales: "Pendientes",
-  failedSales: "Fallidas",
-  grossRevenue: "Ingresos brutos",
-  platformFee: "Comisión (25%)",
-  earnings: "Tus ganancias",
-  byWork: "Ventas por obra",
-  recent: "Últimas ventas",
-  noSales: "Aún no tienes ventas. Cuando alguien compre tus obras, aparecerán aquí.",
-  sale: "venta",
-  sales: "ventas",
-  buyer: "Comprador",
-  date: "Fecha",
-  amount: "Monto",
-  status: "Estado"
-}
+  const salesText = t.profile?.sales || {
+    title: "💰 Estadísticas de Ventas",
+    totalSales: "Ventas totales",
+    completedSales: "Completadas",
+    pendingSales: "Pendientes",
+    failedSales: "Fallidas",
+    grossRevenue: "Ingresos brutos",
+    platformFee: "Comisión (25%)",
+    earnings: "Tus ganancias",
+    byWork: "Ventas por obra",
+    recent: "Últimas ventas",
+    noSales: "Aún no tienes ventas. Cuando alguien compre tus obras, aparecerán aquí.",
+    sale: "venta",
+    sales: "ventas",
+    buyer: "Comprador",
+    date: "Fecha",
+    amount: "Monto",
+    status: "Estado"
+  }
 
   // Query para obtener datos del creador
   const { data: creatorData, isLoading: loadingCreator, error: creatorError } = useQuery({
@@ -141,11 +141,11 @@ export default function ProfilePage() {
     staleTime: 2 * 60 * 1000,
   })
 
-  // 📊 QUERY PARA ESTADÍSTICAS DE VENTAS (TODOS LOS ESTADOS)
+  // Query para estadísticas de ventas
   const { data: salesStats, isLoading: loadingSales } = useQuery({
     queryKey: ['sales', creatorData?.creator_id],
     queryFn: async () => {
-      console.log('💰 INICIANDO QUERY DE VENTAS (TODOS LOS ESTADOS)')
+      console.log('💰 INICIANDO QUERY DE VENTAS')
       console.log('👤 creatorData:', creatorData)
       console.log('🆔 creator_id:', creatorData?.creator_id)
       
@@ -156,14 +156,13 @@ export default function ProfilePage() {
 
       console.log('💰 Buscando TODAS las ventas para creator:', creatorData.creator_id)
 
-      // 🔥 IMPORTANTE: Quitamos el filtro .eq('status', 'completed')
       const { data: purchases, error } = await supabase
         .from('purchases')
         .select('*')
         .eq('creator_id', creatorData.creator_id)
         .order('created_at', { ascending: false })
 
-      console.log('📦 Ventas encontradas (todos los estados):', purchases)
+      console.log('📦 Ventas encontradas:', purchases)
       console.log('❌ Error:', error)
 
       if (error) {
@@ -186,12 +185,10 @@ export default function ProfilePage() {
         }
       }
 
-      // Separar por estados
       const completed = purchases.filter(p => p.status === 'completed')
       const pending = purchases.filter(p => p.status === 'pending')
       const failed = purchases.filter(p => p.status === 'failed')
 
-      // Calcular estadísticas (solo completed para ingresos)
       const totalSales = purchases.length
       const completedSales = completed.length
       const pendingSales = pending.length
@@ -201,7 +198,6 @@ export default function ProfilePage() {
       const platformFees = completed.reduce((sum, p) => sum + (p.amount * 0.25), 0)
       const creatorEarnings = completed.reduce((sum, p) => sum + (p.amount * 0.75), 0)
 
-      // Ventas por obra (incluyendo todos los estados)
       const salesByWork = purchases.reduce((acc: any, p) => {
         const workId = p.work_id
         if (!acc[workId]) {
@@ -227,7 +223,6 @@ export default function ProfilePage() {
         return acc
       }, {})
 
-      // Últimas 5 ventas (todos los estados)
       const recentSales = purchases.slice(0, 5).map(p => ({
         id: p.id,
         work_title: p.work_title || 'Obra sin título',
@@ -290,52 +285,63 @@ export default function ProfilePage() {
     },
   })
 
-  // Mutación para eliminar cuenta
-  const deleteAccountMutation = useMutation({
-    mutationFn: async () => {
-      if (creatorData) {
-        await supabase
-          .from('profile_visits')
-          .delete()
-          .eq('creator_id', creatorData.creator_id)
-        
-        for (const work of works) {
-          if (work.file_url) {
-            const filePath = work.file_url.split('/').pop()
-            if (filePath) {
-              await supabase.storage
-                .from('works')
-                .remove([filePath])
-            }
+    // Mutación para eliminar cuenta - VERSIÓN SEGURA (SOLO EL USUARIO ACTUAL)
+const deleteAccountMutation = useMutation({
+  mutationFn: async () => {
+    console.log('🚨 ===== INICIANDO ELIMINACIÓN DE CUENTA =====')
+    console.log('👤 Usuario actual:', user?.email)
+    
+    if (!user?.email) {
+      throw new Error('No hay usuario autenticado')
+    }
+
+    try {
+      // PRIMERO: Eliminar manualmente las obras de storage
+      // (esto hay que hacerlo porque storage no tiene CASCADE)
+      console.log('📦 Eliminando archivos de obras...')
+      for (const work of works) {
+        if (work.file_url) {
+          const filePath = work.file_url.split('/').pop()
+          if (filePath) {
+            await supabase.storage
+              .from('works')
+              .remove([filePath])
           }
-          await supabase
-            .from('work_visits')
-            .delete()
-            .eq('work_id', work.id)
         }
-        
-        await supabase
-          .from('contact_messages')
-          .delete()
-          .eq('creator_id', creatorData.creator_id)
-        
-        await supabase
-          .from('works')
-          .delete()
-          .eq('creator_id', creatorData.creator_id)
-        
-        await supabase
-          .from('creators')
-          .delete()
-          .eq('email', user?.email)
       }
+
+      // SEGUNDO: Llamar a la función SQL que elimina SOLO al usuario actual
+      console.log('🗑️ Eliminando usuario de auth.users...')
+      const { data, error } = await supabase
+        .rpc('delete_my_account')
+
+      if (error) {
+        console.error('Error al eliminar:', error)
+        throw new Error(`Error al eliminar: ${error.message}`)
+      }
+
+      console.log('✅ Usuario eliminado correctamente')
       
+      // Cerrar sesión localmente
       await signOut()
-    },
-    onSuccess: () => {
-      router.push('/')
-    },
-  })
+      
+      console.log('✅ ===== ELIMINACIÓN COMPLETADA =====')
+      return true
+      
+    } catch (error) {
+      console.error('❌ Error:', error)
+      throw error
+    }
+  },
+  onSuccess: () => {
+    console.log('🎉 Cuenta eliminada exitosamente')
+    router.push('/')
+  },
+  onError: (error: any) => {
+    console.error('❌ Error:', error)
+    alert('Error al eliminar la cuenta. Por favor contacta a soporte.')
+  },
+})
 
   const handleDeleteWork = useCallback(async (workId: string, fileUrl: string | null) => {
     if (!confirm(t.messages?.confirmDelete || '¿Estás seguro de que quieres eliminar esta obra?')) return
@@ -351,7 +357,8 @@ export default function ProfilePage() {
     }
   }, [deleteWorkMutation, t])
 
-  const handleDeleteAccount = useCallback(async () => {
+    const handleDeleteAccount = useCallback(async () => {
+    console.log('🖱️ Click en eliminar cuenta confirmado')
     setDeletingAccount(true)
     try {
       await deleteAccountMutation.mutateAsync()
@@ -440,7 +447,7 @@ export default function ProfilePage() {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent'
         }}>
-          👤 {t.profile?.title || 'Mi Perfil'}
+          {t.profile?.title || 'Mi Perfil'}
         </h1>
         
         <div style={{
@@ -477,34 +484,85 @@ export default function ProfilePage() {
 
   return (
     <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px' }}>
+      
+      {/* HEADER CON FOTO Y TÍTULO - CON BOTONES DE ACCIÓN */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '30px'
       }}>
-        <h1 style={{ 
-          fontSize: '2rem', 
-          margin: 0,
-          background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
-        }}>
-          👤 {t.profile?.title || 'Mi Perfil'}
-        </h1>
-        <button
-          onClick={signOut}
-          style={{
-            padding: '8px 16px',
-            background: '#ff4444',
-            color: 'white',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: 'bold'
-          }}
-        >
-          {t.auth?.logout || 'Cerrar sesión'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {/* Foto al lado del título */}
+          {creatorData?.avatar_url ? (
+            <img
+              src={creatorData.avatar_url}
+              alt={fullName}
+              style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '2px solid #4f46e5'
+              }}
+            />
+          ) : (
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '24px',
+              color: 'white',
+              fontWeight: 'bold'
+            }}>
+              {creatorData?.full_first_name?.charAt(0) || '👤'}
+            </div>
+          )}
+          <h1 style={{ 
+            fontSize: '2rem', 
+            margin: 0,
+            background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            {t.profile?.title || 'Mi Perfil'}
+          </h1>
+        </div>
+        
+        {/* BOTONES DE ACCIÓN */}
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <Link
+            href="/profile/edit"
+            style={{
+              padding: '8px 16px',
+              background: '#4f46e5',
+              color: 'white',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+              borderRadius: '4px'
+            }}
+          >
+            ✏️ {t.profile?.editButton || 'Editar perfil'}
+          </Link>
+          <button
+            onClick={signOut}
+            style={{
+              padding: '8px 16px',
+              background: '#ff4444',
+              color: 'white',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              borderRadius: '4px'
+            }}
+          >
+            {t.auth?.logout || 'Cerrar sesión'}
+          </button>
+        </div>
       </div>
 
       {/* Información del creador */}
@@ -513,7 +571,8 @@ export default function ProfilePage() {
         padding: '25px',
         marginBottom: '30px',
         background: 'white',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        borderRadius: '4px'
       }}>
         <h2 style={{ marginTop: 0, marginBottom: '20px', color: '#333' }}>
           {t.profile?.personalInfo || 'Información personal'}
@@ -526,18 +585,25 @@ export default function ProfilePage() {
           <div>
             <strong>Email:</strong> {creatorData.email}
           </div>
+          {/* Mostrar teléfono si existe */}
+          {creatorData.phone && (
+            <div>
+              <strong>Teléfono:</strong> {creatorData.phone}
+            </div>
+          )}
           <div>
             <strong>{t.work?.country || 'País'}:</strong> {creatorData.country_name} ({creatorData.country_code})
           </div>
           <div>
-            <strong>{t.profile?.stats?.firstWork || 'Región'}:</strong> {creatorData.region}
+            <strong>Región:</strong> {creatorData.region}
           </div>
         </div>
 
         <div style={{
           marginTop: '20px',
           padding: '15px',
-          background: '#f0f7ff'
+          background: '#f0f7ff',
+          borderRadius: '4px'
         }}>
           <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>
             🆔 {t.profile?.yourCreatorId || 'Tu Creator ID'}:
@@ -547,7 +613,8 @@ export default function ProfilePage() {
             color: '#0f0',
             padding: '10px',
             fontSize: '1.2rem',
-            display: 'inline-block'
+            display: 'inline-block',
+            borderRadius: '4px'
           }}>
             {creatorData.creator_id}
           </code>
@@ -559,7 +626,8 @@ export default function ProfilePage() {
         background: 'white',
         padding: '20px',
         marginBottom: '30px',
-        border: '1px solid #eaeaea'
+        border: '1px solid #eaeaea',
+        borderRadius: '4px'
       }}>
         <h3 style={{ marginTop: 0, marginBottom: '20px' }}>📊 {t.profile?.stats?.mostViewed || 'Estadísticas'}</h3>
         
@@ -572,7 +640,8 @@ export default function ProfilePage() {
           <div style={{
             background: '#f5f5f5',
             padding: '15px',
-            textAlign: 'center'
+            textAlign: 'center',
+            borderRadius: '4px'
           }}>
             <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
               {stats?.profileVisits || 0}
@@ -583,7 +652,8 @@ export default function ProfilePage() {
           <div style={{
             background: '#f5f5f5',
             padding: '15px',
-            textAlign: 'center'
+            textAlign: 'center',
+            borderRadius: '4px'
           }}>
             <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
               {stats?.totalMessages || 0}
@@ -594,7 +664,8 @@ export default function ProfilePage() {
           <div style={{
             background: (stats?.unreadMessages || 0) > 0 ? '#fff5f5' : '#f5f5f5',
             padding: '15px',
-            textAlign: 'center'
+            textAlign: 'center',
+            borderRadius: '4px'
           }}>
             <div style={{ 
               fontSize: '2rem', 
@@ -608,7 +679,9 @@ export default function ProfilePage() {
         </div>
 
         {/* Estadísticas por obra */}
-        <h4 style={{ marginBottom: '15px' }}>{t.profile?.stats?.mostViewed || 'Obras más vistas'}</h4>
+        <h4 style={{ marginBottom: '15px' }}>
+          📋 {t.profile?.stats?.inventory || 'Estadísticas de Obras'}
+        </h4>
         <div style={{ display: 'grid', gap: '10px' }}>
           {worksStats
             .sort((a, b) => b.visits - a.visits)
@@ -619,14 +692,16 @@ export default function ProfilePage() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '10px',
-                background: '#f9f9f9'
+                background: '#f9f9f9',
+                borderRadius: '4px'
               }}>
                 <span>{work.title}</span>
                 <span style={{
                   background: '#4f46e5',
                   color: 'white',
                   padding: '2px 8px',
-                  fontSize: '0.8rem'
+                  fontSize: '0.8rem',
+                  borderRadius: '4px'
                 }}>
                   {work.visits} {work.visits === 1 ? (t.work?.visits?.singular || 'visita') : (t.work?.visits?.plural || 'visitas')}
                 </span>
@@ -635,7 +710,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 📊 ESTADÍSTICAS DE VENTAS - CON TODOS LOS ESTADOS */}
+     {/* 📊 ESTADÍSTICAS DE VENTAS */}
       {loadingSales ? (
         <div style={{ textAlign: 'center', padding: '20px' }}>{t.search?.searching || 'Cargando...'}</div>
       ) : salesStats && salesStats.totalSales > 0 ? (
@@ -643,11 +718,12 @@ export default function ProfilePage() {
           background: 'white',
           padding: '20px',
           marginBottom: '30px',
-          border: '1px solid #eaeaea'
+          border: '1px solid #eaeaea',
+          borderRadius: '4px'
         }}>
           <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{salesText.title}</h3>
           
-          {/* Tarjetas de resumen - AHORA CON PENDIENTES Y FALLIDAS */}
+          {/* Tarjetas de resumen */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
@@ -657,7 +733,8 @@ export default function ProfilePage() {
             <div style={{
               background: '#f0f7ff',
               padding: '15px',
-              textAlign: 'center'
+              textAlign: 'center',
+              borderRadius: '4px'
             }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
                 {salesStats.totalSales}
@@ -668,7 +745,8 @@ export default function ProfilePage() {
             <div style={{
               background: '#f0f7ff',
               padding: '15px',
-              textAlign: 'center'
+              textAlign: 'center',
+              borderRadius: '4px'
             }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
                 {salesStats.completedSales}
@@ -679,7 +757,8 @@ export default function ProfilePage() {
             <div style={{
               background: salesStats.pendingSales > 0 ? '#fff3cd' : '#f5f5f5',
               padding: '15px',
-              textAlign: 'center'
+              textAlign: 'center',
+              borderRadius: '4px'
             }}>
               <div style={{ 
                 fontSize: '2rem', 
@@ -694,7 +773,8 @@ export default function ProfilePage() {
             <div style={{
               background: salesStats.failedSales > 0 ? '#f8d7da' : '#f5f5f5',
               padding: '15px',
-              textAlign: 'center'
+              textAlign: 'center',
+              borderRadius: '4px'
             }}>
               <div style={{ 
                 fontSize: '2rem', 
@@ -707,7 +787,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Ingresos (solo completadas) */}
+          {/* Ingresos */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
@@ -717,7 +797,8 @@ export default function ProfilePage() {
             <div style={{
               background: '#f0f7ff',
               padding: '15px',
-              textAlign: 'center'
+              textAlign: 'center',
+              borderRadius: '4px'
             }}>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4f46e5' }}>
                 ${salesStats.totalRevenue.toFixed(2)}
@@ -728,7 +809,8 @@ export default function ProfilePage() {
             <div style={{
               background: '#fff5f5',
               padding: '15px',
-              textAlign: 'center'
+              textAlign: 'center',
+              borderRadius: '4px'
             }}>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc2626' }}>
                 ${salesStats.platformFees.toFixed(2)}
@@ -739,7 +821,8 @@ export default function ProfilePage() {
             <div style={{
               background: '#e8f5e8',
               padding: '15px',
-              textAlign: 'center'
+              textAlign: 'center',
+              borderRadius: '4px'
             }}>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2e7d32' }}>
                 ${salesStats.creatorEarnings.toFixed(2)}
@@ -761,7 +844,8 @@ export default function ProfilePage() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       padding: '10px',
-                      background: '#f9f9f9'
+                      background: '#f9f9f9',
+                      borderRadius: '4px'
                     }}>
                       <span style={{ fontWeight: 500 }}>{work.work_title}</span>
                       <div style={{ display: 'flex', gap: '8px' }}>
@@ -770,7 +854,8 @@ export default function ProfilePage() {
                             background: '#10b981',
                             color: 'white',
                             padding: '2px 8px',
-                            fontSize: '0.8rem'
+                            fontSize: '0.8rem',
+                            borderRadius: '4px'
                           }}>
                             ✅ {work.completed}
                           </span>
@@ -780,7 +865,8 @@ export default function ProfilePage() {
                             background: '#fbbf24',
                             color: '#333',
                             padding: '2px 8px',
-                            fontSize: '0.8rem'
+                            fontSize: '0.8rem',
+                            borderRadius: '4px'
                           }}>
                             ⏳ {work.pending}
                           </span>
@@ -790,7 +876,8 @@ export default function ProfilePage() {
                             background: '#ef4444',
                             color: 'white',
                             padding: '2px 8px',
-                            fontSize: '0.8rem'
+                            fontSize: '0.8rem',
+                            borderRadius: '4px'
                           }}>
                             ❌ {work.failed}
                           </span>
@@ -799,7 +886,8 @@ export default function ProfilePage() {
                           background: '#4f46e5',
                           color: 'white',
                           padding: '2px 8px',
-                          fontSize: '0.8rem'
+                          fontSize: '0.8rem',
+                          borderRadius: '4px'
                         }}>
                           💰 ${work.revenue.toFixed(2)}
                         </span>
@@ -810,7 +898,7 @@ export default function ProfilePage() {
             </>
           )}
 
-          {/* Últimas ventas con estado */}
+          {/* Últimas ventas */}
           {salesStats.recentSales && salesStats.recentSales.length > 0 && (
             <>
               <h4 style={{ marginBottom: '15px' }}>{salesText.recent}</h4>
@@ -818,7 +906,8 @@ export default function ProfilePage() {
                 {salesStats.recentSales.map((sale: any) => (
                   <div key={sale.id} style={{
                     padding: '10px',
-                    background: '#f9f9f9'
+                    background: '#f9f9f9',
+                    borderRadius: '4px'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                       <span style={{ fontWeight: 'bold' }}>{sale.work_title}</span>
@@ -850,7 +939,8 @@ export default function ProfilePage() {
           padding: '20px',
           marginBottom: '30px',
           border: '1px solid #eaeaea',
-          textAlign: 'center'
+          textAlign: 'center',
+          borderRadius: '4px'
         }}>
           <h3 style={{ marginTop: 0, marginBottom: '10px' }}>{salesText.title}</h3>
           <p style={{ color: '#666' }}>{salesText.noSales}</p>
@@ -872,7 +962,8 @@ export default function ProfilePage() {
             color: 'white',
             textAlign: 'center',
             textDecoration: 'none',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            borderRadius: '4px'
           }}
         >
           ➕ {t.profile?.actions?.registerWork || 'Registrar nueva obra'}
@@ -886,7 +977,8 @@ export default function ProfilePage() {
             color: 'white',
             textAlign: 'center',
             textDecoration: 'none',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            borderRadius: '4px'
           }}
         >
           👁️ {t.profile?.actions?.viewPublic || 'Ver perfil público'}
@@ -901,7 +993,8 @@ export default function ProfilePage() {
           textAlign: 'center',
           padding: '40px',
           background: '#f9f9f9',
-          marginBottom: '30px'
+          marginBottom: '30px',
+          borderRadius: '4px'
         }}>
           <p style={{ fontSize: '1.2rem', marginBottom: '20px' }}>
             {t.profile?.noWorks || 'Aún no has registrado ninguna obra'}
@@ -913,7 +1006,8 @@ export default function ProfilePage() {
               background: 'linear-gradient(135deg, #4f46e5, #10b981)',
               color: 'white',
               textDecoration: 'none',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              borderRadius: '4px'
             }}
           >
             {t.profile?.registerFirst || 'Registrar mi primera obra'}
@@ -937,12 +1031,13 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Sección de peligro */}
+            {/* Sección de peligro - VERSIÓN CORREGIDA CON TRADUCCIONES */}
       <div style={{
-        marginTop: '20px',
+        marginTop: '40px',
         padding: '20px',
         background: '#fff5f5',
-        border: '1px solid #ffcdd2'
+        border: '1px solid #ffcdd2',
+        borderRadius: '4px'
       }}>
         <h3 style={{ color: '#c62828', marginBottom: '10px' }}>⚠️ {t.profile?.dangerZone || 'Zona de peligro'}</h3>
         <p style={{ color: '#666', marginBottom: '15px' }}>
@@ -951,7 +1046,10 @@ export default function ProfilePage() {
 
         {!showDeleteConfirm ? (
           <button
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={() => {
+              console.log('Mostrar confirmación de eliminación')
+              setShowDeleteConfirm(true)
+            }}
             style={{
               padding: '12px 24px',
               background: '#dc2626',
@@ -959,7 +1057,8 @@ export default function ProfilePage() {
               border: 'none',
               fontSize: '1rem',
               fontWeight: 'bold',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              borderRadius: '4px'
             }}
           >
             {t.profile?.deleteButton || 'Eliminar mi cuenta permanentemente'}
@@ -968,11 +1067,32 @@ export default function ProfilePage() {
           <div style={{
             background: 'white',
             padding: '20px',
-            border: '1px solid #ffcdd2'
+            border: '1px solid #ffcdd2',
+            borderRadius: '4px'
           }}>
             <p style={{ fontWeight: 'bold', marginBottom: '15px', color: '#c62828' }}>
               {t.profile?.confirmDelete || '¿Estás completamente seguro? Esta acción no se puede deshacer.'}
             </p>
+            
+            {/* LISTA DE ELEMENTOS A ELIMINAR CON TRADUCCIONES */}
+            <div style={{ marginBottom: '20px', color: '#666' }}>
+  <p>{t.profile?.deleteItems || 'Se eliminarán:'}</p>
+  <ul style={{ marginTop: '10px', marginLeft: '20px' }}>
+    {t.profile?.deleteList?.map((item: string, index: number) => (
+      <li key={index}>{item}</li>
+    )) || (
+      <>
+        <li>Tu perfil de creador</li>
+        <li>Todas tus obras registradas</li>
+        <li>Las imágenes de tus obras</li>
+        <li>Las visitas a tu perfil y obras</li>
+        <li>Los mensajes de contacto</li>
+        <li>Tu cuenta de usuario</li>
+      </>
+    )}
+  </ul>
+</div>
+            
             <div style={{ display: 'flex', gap: '10px' }}>
               <button
                 onClick={handleDeleteAccount}
@@ -984,13 +1104,17 @@ export default function ProfilePage() {
                   border: 'none',
                   fontSize: '1rem',
                   fontWeight: 'bold',
-                  cursor: deletingAccount ? 'not-allowed' : 'pointer'
+                  cursor: deletingAccount ? 'not-allowed' : 'pointer',
+                  borderRadius: '4px'
                 }}
               >
-                {deletingAccount ? (t.search?.searching || 'Eliminando...') : (t.profile?.confirmYes || 'Sí, eliminar mi cuenta')}
+                {deletingAccount ? 'Eliminando...' : (t.profile?.confirmYes || 'Sí, eliminar mi cuenta')}
               </button>
               <button
-                onClick={() => setShowDeleteConfirm(false)}
+                onClick={() => {
+                  console.log('Cancelar eliminación')
+                  setShowDeleteConfirm(false)
+                }}
                 disabled={deletingAccount}
                 style={{
                   padding: '10px 20px',
@@ -998,7 +1122,8 @@ export default function ProfilePage() {
                   color: '#666',
                   border: '1px solid #ccc',
                   fontSize: '1rem',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  borderRadius: '4px'
                 }}
               >
                 {t.profile?.cancel || 'Cancelar'}

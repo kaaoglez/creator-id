@@ -13,6 +13,9 @@ export default function Register() {
   const [formLoading, setFormLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [creatorId, setCreatorId] = useState("");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const router = useRouter();
   const supabaseClient = createClient();
   const { t } = useLanguage()
@@ -43,7 +46,7 @@ export default function Register() {
       if (error) return [];
       return data || [];
     },
-    staleTime: 60 * 60 * 1000, // 1 hora (los países cambian poco)
+    staleTime: 60 * 60 * 1000, // 1 hora
   })
 
   // Query para verificar si ya existe Creator ID
@@ -62,7 +65,7 @@ export default function Register() {
     staleTime: 5 * 60 * 1000,
   })
 
-  // Formatear nombre completo (memoizado)
+  // Formatear nombre completo
   const formatFullName = useCallback((value: string | FormDataEntryValue | null) => {
     if (!value) return "";
     return value.toString()
@@ -72,27 +75,86 @@ export default function Register() {
       .join(' ');
   }, [])
 
-  const handleSubmit = useCallback(async (e: any) => {
-    e.preventDefault();
-    setFormLoading(true);
+  // Función para subir avatar
+  const uploadAvatar = async (file: File): Promise<string | null> => {
+    setUploadingAvatar(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user?.email}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
 
-    // ✅ Verificación de usuario
-    if (!user) {
-      alert(t.errors?.unauthorized || "Debes iniciar sesión primero");
-      setFormLoading(false);
-      router.push('/auth/login?redirectTo=/register');
-      return;
+      console.log('📤 Subiendo avatar:', filePath)
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        console.error('❌ Error de upload:', uploadError)
+        throw uploadError
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      console.log('✅ Avatar subido:', publicUrl)
+      return publicUrl
+    } catch (error) {
+      console.error('❌ Error subiendo avatar:', error)
+      return null
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  // Manejar cambio de archivo
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setAvatarFile(file)
+    
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    } else {
+      setAvatarPreview(null)
+    }
+  }
+
+  const handleSubmit = useCallback(async (e: any) => {
+    e.preventDefault()
+    setFormLoading(true)
+
+    // Verificar sesión activa
+    const { data: { session } } = await supabaseClient.auth.getSession()
+    
+    if (!session) {
+      console.error('❌ No hay sesión activa')
+      alert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.')
+      router.push('/auth/login')
+      setFormLoading(false)
+      return
     }
 
-    const form = new FormData(e.target);
-    const full_first_name = formatFullName(form.get("full_first_name"));
-    const full_last_name = formatFullName(form.get("full_last_name"));
-    const country_code = form.get("country_code")?.toString();
+    if (!user) {
+      alert(t.errors?.unauthorized || "Debes iniciar sesión primero")
+      setFormLoading(false)
+      router.push('/auth/login?redirectTo=/register')
+      return
+    }
+
+    const form = new FormData(e.target)
+    const full_first_name = formatFullName(form.get("full_first_name"))
+    const full_last_name = formatFullName(form.get("full_last_name"))
+    const country_code = form.get("country_code")?.toString()
 
     if (!full_first_name || !full_last_name || !country_code) {
-      alert(t.errors?.required || "Por favor completa todos los campos.");
-      setFormLoading(false);
-      return;
+      alert(t.errors?.required || "Por favor completa todos los campos.")
+      setFormLoading(false)
+      return
     }
 
     try {
@@ -100,29 +162,32 @@ export default function Register() {
         .from("countries")
         .select("name, alpha3, region")
         .eq("country_code", country_code)
-        .single();
+        .single()
 
       if (countryError || !countryData) {
-        alert(t.errors?.countryNotFound || "Error: país no encontrado");
-        setFormLoading(false);
-        return;
+        alert(t.errors?.countryNotFound || "Error: país no encontrado")
+        setFormLoading(false)
+        return
       }
 
-      const newCreatorId = generateCreatorID(country_code);
+      const newCreatorId = generateCreatorID(country_code)
+      
+      let avatarUrl = null
+      if (avatarFile) {
+        avatarUrl = await uploadAvatar(avatarFile)
+      }
 
-      // ✅ Insertar usando las nuevas columnas
       const { error } = await supabase.from("creators").insert([
         {
           full_first_name,
           full_last_name,
-          first_name: full_first_name.split(' ')[0],
-          last_name: full_last_name.split(' ')[0],
           email: user.email,
           country_code,
           country_name: countryData.name,
           alpha3: countryData.alpha3,
           region: countryData.region,
           creator_id: newCreatorId,
+          avatar_url: avatarUrl
         },
       ]);
 
@@ -139,9 +204,9 @@ export default function Register() {
     } finally {
       setFormLoading(false);
     }
-  }, [user, formatFullName, t, router])
+  }, [user, avatarFile, formatFullName, t, router])
 
-  // Memoizar textos
+  // Textos memoizados
   const texts = useMemo(() => ({
     title: t.register?.title || "Crear tu Creator ID",
     subtitle: t.register?.subtitle || "Completa tus datos para generar tu identificador único de creador.",
@@ -333,6 +398,7 @@ export default function Register() {
         padding: "30px",
         boxShadow: "0 4px 6px rgba(0,0,0,0.1)"
       }}>
+        {/* Nombre */}
         <div style={{ marginBottom: "20px" }}>
           <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
             {texts.firstName} <span style={{ color: "red" }}>*</span>
@@ -357,6 +423,7 @@ export default function Register() {
           </small>
         </div>
 
+        {/* Apellido */}
         <div style={{ marginBottom: "20px" }}>
           <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
             {texts.lastName} <span style={{ color: "red" }}>*</span>
@@ -381,6 +448,96 @@ export default function Register() {
           </small>
         </div>
 
+        {/* Foto de perfil */}
+        <div style={{ marginBottom: "20px" }}>
+          <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+            Foto de perfil (opcional)
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+            {avatarPreview ? (
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={avatarPreview}
+                  alt="Preview"
+                  style={{
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '2px solid #4f46e5'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAvatarFile(null);
+                    setAvatarPreview(null);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '-5px',
+                    right: '-5px',
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '20px',
+                    height: '20px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                background: '#f0f7ff',
+                border: '2px dashed #4f46e5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                color: '#4f46e5'
+              }}>
+                📸
+              </div>
+            )}
+            <input
+              type="file"
+              id="avatar"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              style={{ display: 'none' }}
+            />
+            <button
+              type="button"
+              onClick={() => document.getElementById('avatar')?.click()}
+              disabled={uploadingAvatar}
+              style={{
+                padding: '8px 16px',
+                background: 'white',
+                border: '1px solid #4f46e5',
+                color: '#4f46e5',
+                cursor: uploadingAvatar ? 'not-allowed' : 'pointer',
+                borderRadius: '4px'
+              }}
+            >
+              {uploadingAvatar ? 'Subiendo...' : 'Seleccionar foto'}
+            </button>
+          </div>
+          <small style={{ color: '#666', display: 'block', marginTop: '5px' }}>
+            Formatos: JPG, PNG, GIF (máx 2MB)
+          </small>
+        </div>
+
+        {/* País */}
         <div style={{ marginBottom: "25px" }}>
           <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>
             {texts.country} <span style={{ color: "red" }}>*</span>
@@ -407,25 +564,26 @@ export default function Register() {
           </select>
         </div>
 
+        {/* Botón submit */}
         <button
           type="submit"
-          disabled={formLoading}
+          disabled={formLoading || uploadingAvatar}
           style={{
             width: "100%",
             padding: "14px",
-            background: formLoading ? "#ccc" : "linear-gradient(135deg, #4f46e5, #10b981)",
+            background: formLoading || uploadingAvatar ? "#ccc" : "linear-gradient(135deg, #4f46e5, #10b981)",
             color: "white",
             border: "none",
             fontSize: "1.1rem",
             fontWeight: "bold",
-            cursor: formLoading ? "not-allowed" : "pointer",
+            cursor: formLoading || uploadingAvatar ? "not-allowed" : "pointer",
             transition: "transform 0.2s",
             transform: formLoading ? "none" : "scale(1)"
           }}
-          onMouseOver={(e) => !formLoading && (e.currentTarget.style.transform = "scale(1.02)")}
-          onMouseOut={(e) => !formLoading && (e.currentTarget.style.transform = "scale(1)")}
+          onMouseOver={(e) => !formLoading && !uploadingAvatar && (e.currentTarget.style.transform = "scale(1.02)")}
+          onMouseOut={(e) => !formLoading && !uploadingAvatar && (e.currentTarget.style.transform = "scale(1)")}
         >
-          {texts.button}
+          {uploadingAvatar ? "Subiendo foto..." : texts.button}
         </button>
       </form>
 
