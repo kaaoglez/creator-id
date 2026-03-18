@@ -24,12 +24,12 @@ export default function LoginPage() {
 
   // Inicializar Google One Tap
   useEffect(() => {
+    // Cargar script de Google
     const script = document.createElement('script')
     script.src = 'https://accounts.google.com/gsi/client'
     script.async = true
     script.defer = true
-    document.body.appendChild(script)
-
+    
     script.onload = () => {
       window.google?.accounts.id.initialize({
         client_id: '220485474651-6ilivjedvlvqnr1abehq5dnmutcu0q9s.apps.googleusercontent.com',
@@ -37,8 +37,11 @@ export default function LoginPage() {
         auto_select: true,
         cancel_on_tap_outside: false,
         context: 'signin',
+        use_fedcm_for_prompt: true,
       })
     }
+    
+    document.body.appendChild(script)
 
     return () => {
       document.body.removeChild(script)
@@ -68,7 +71,7 @@ export default function LoginPage() {
     }
   }
 
-  // Función para Google One Tap
+  // Callback de Google One Tap
   const handleGoogleCredential = async (response: any) => {
     try {
       setLoading(true)
@@ -83,14 +86,45 @@ export default function LoginPage() {
       router.push('/profile')
       router.refresh()
     } catch (error: any) {
+      console.error('❌ Error en Google One Tap:', error)
       setError(error.message || 'Error al iniciar sesión con Google')
       setLoading(false)
     }
   }
 
-  // Función para mostrar One Tap manualmente
-  const handleGoogleLogin = async () => {
-    window.google?.accounts.id.prompt()
+  // Función para login con Google (One Tap con fallback)
+  const handleGoogleLogin = () => {
+    try {
+      // Intentar mostrar One Tap
+      window.google?.accounts.id.prompt((notification: any) => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          // Si One Tap no se muestra, usar método tradicional
+          console.log('⚠️ One Tap no disponible, usando método tradicional')
+          handleGoogleLoginTraditional()
+        }
+      })
+    } catch (error) {
+      // Si hay cualquier error, usar método tradicional
+      console.log('⚠️ Error en One Tap, usando método tradicional')
+      handleGoogleLoginTraditional()
+    }
+  }
+
+  // Método tradicional de Google (redirección)
+  const handleGoogleLoginTraditional = async () => {
+    try {
+      setLoading(true)
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) throw error
+    } catch (error: any) {
+      setError(error.message || 'Error al conectar con Google')
+      setLoading(false)
+    }
   }
 
   // Función para login con Facebook
@@ -171,9 +205,6 @@ export default function LoginPage() {
             {t.auth?.signIn || 'Sign in to your account'}
           </p>
         </div>
-
-        {/* Google One Tap container */}
-        <div id="google-one-tap-container"></div>
 
         {/* Botones de redes sociales */}
         <div style={{ 
