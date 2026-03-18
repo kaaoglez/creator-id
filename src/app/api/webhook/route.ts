@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
-import { sendPurchaseConfirmation } from '@/lib/email'
+import { sendPurchaseConfirmation } from '@/lib/email/purchaseConfirmation'
+import { sendSaleNotification } from '@/lib/email/saleNotification'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -40,10 +41,10 @@ export async function POST(req: Request) {
       const supabase = await createClient()
       console.log('✅ Cliente Supabase creado')
 
-      // Obtener datos completos de la obra
+      // Obtener datos completos de la obra y el creador
       const { data: work, error: workError } = await supabase
         .from('works')
-        .select('*, creators(creator_id, email)')
+        .select('*, creators(*)')
         .eq('id', workId)
         .single()
 
@@ -54,8 +55,8 @@ export async function POST(req: Request) {
 
       console.log('📎 Obra encontrada:', { 
         title: work.title, 
-        file_url: work.file_url,
-        creator_id: work.creator_id 
+        creator_email: work.creators.email,
+        creator_name: work.creators.full_first_name
       })
 
       // Calcular comisiones
@@ -115,22 +116,41 @@ export async function POST(req: Request) {
 
       console.log('✅ Compra registrada/actualizada correctamente')
 
-      // Enviar email de confirmación
+      // Enviar email de confirmación al comprador
       if (work.file_url) {
-        console.log('📧 Enviando email a:', buyerEmail)
+        console.log('📧 Enviando email de confirmación al comprador:', buyerEmail)
         
-        const emailResult = await sendPurchaseConfirmation({
+        await sendPurchaseConfirmation({
           to: buyerEmail,
           buyerName: buyerName || 'Cliente',
           workTitle: work.title,
           downloadUrl: work.file_url,
           amount: amount
         })
-
-        console.log('📧 Resultado del envío:', emailResult)
-      } else {
-        console.log('⚠️ La obra no tiene archivo para descargar')
       }
+
+      // 📨 ENVIAR NOTIFICACIÓN AL CREADOR
+      console.log('📧 Enviando notificación de venta al creador:', work.creators.email)
+      
+      // Formatear nombre del creador
+      const creatorFullName = work.creators.full_first_name && work.creators.full_last_name
+        ? `${work.creators.full_first_name} ${work.creators.full_last_name}`
+        : 'Creador'
+
+      await sendSaleNotification({
+        to: work.creators.email,
+        creatorName: creatorFullName,
+        buyerName: buyerName || 'Comprador',
+        buyerEmail: buyerEmail,
+        workTitle: work.title,
+        amount: amount,
+        platformFee: platformFee,
+        earnings: creatorEarnings,
+        saleDate: new Date(),
+        workId: work.id
+      })
+
+      console.log('✅ Proceso completado - Comprador y creador notificados')
     }
 
     return NextResponse.json({ received: true })
