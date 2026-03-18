@@ -17,23 +17,43 @@ export default function ProfilePage() {
   const router = useRouter()
   const supabase = createClient()
   const queryClient = useQueryClient()
-  const { t } = useLanguage()
-  console.log('📝 t.profile:', t.profile)
-  console.log('📝 t.profile?.sales:', t.profile?.sales)
+  const { t, language } = useLanguage()
 
   // Textos de ventas con fallback
-  const salesText = t.profile?.sales 
+ const salesText = t.profile?.sales || {
+  title: "💰 Estadísticas de Ventas",
+  totalSales: "Ventas totales",
+  completedSales: "Completadas",
+  pendingSales: "Pendientes",
+  failedSales: "Fallidas",
+  grossRevenue: "Ingresos brutos",
+  platformFee: "Comisión (25%)",
+  earnings: "Tus ganancias",
+  byWork: "Ventas por obra",
+  recent: "Últimas ventas",
+  noSales: "Aún no tienes ventas. Cuando alguien compre tus obras, aparecerán aquí.",
+  sale: "venta",
+  sales: "ventas",
+  buyer: "Comprador",
+  date: "Fecha",
+  amount: "Monto",
+  status: "Estado"
+}
 
   // Query para obtener datos del creador
   const { data: creatorData, isLoading: loadingCreator, error: creatorError } = useQuery({
     queryKey: ['creator', user?.email],
     queryFn: async () => {
       if (!user?.email) return null
+      console.log('🔍 Buscando creador con email:', user.email)
+      
       const { data, error } = await supabase
         .from('creators')
         .select('*')
         .eq('email', user.email)
         .maybeSingle()
+      
+      console.log('📦 Resultado creator:', { data, error })
       
       if (error) {
         console.error('❌ Error buscando creador:', error)
@@ -45,11 +65,17 @@ export default function ProfilePage() {
     staleTime: 5 * 60 * 1000,
   })
 
+  console.log('👤 creatorData:', creatorData)
+  console.log('👤 loadingCreator:', loadingCreator)
+  console.log('👤 creatorError:', creatorError)
+
   // Query para obtener obras
   const { data: works = [], isLoading: loadingWorks } = useQuery({
     queryKey: ['works', creatorData?.creator_id],
     queryFn: async () => {
       if (!creatorData?.creator_id) return []
+      console.log('🔍 Buscando obras para creator_id:', creatorData.creator_id)
+      
       const { data, error } = await supabase
         .from('works')
         .select('*')
@@ -60,6 +86,7 @@ export default function ProfilePage() {
         console.error('❌ Error buscando obras:', error)
         return []
       }
+      console.log('✅ Obras encontradas:', data?.length || 0)
       return data || []
     },
     enabled: !!creatorData?.creator_id,
@@ -114,115 +141,129 @@ export default function ProfilePage() {
     staleTime: 2 * 60 * 1000,
   })
 
-  // Query para estadísticas de ventas
-const { data: salesStats, isLoading: loadingSales } = useQuery({
-  queryKey: ['sales', creatorData?.creator_id],
-  queryFn: async () => {
-    if (!creatorData?.creator_id) return null
-
-    console.log('💰 Buscando ventas para creator:', creatorData.creator_id)
-
-    // Obtener todas las compras completadas del creador
-    const { data: purchases, error } = await supabase
-      .from('purchases')
-      .select('*')
-      .eq('creator_id', creatorData.creator_id)
-      .eq('status', 'completed')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('❌ Error cargando ventas:', error)
-      return null
-    }
-
-    console.log('📦 Ventas encontradas:', purchases?.length || 0)
-
-    // Si no hay ventas, devolver estructura vacía
-    if (!purchases || purchases.length === 0) {
-      return {
-        totalSales: 0,
-        totalRevenue: 0,
-        platformFees: 0,
-        creatorEarnings: 0,
-        salesByWork: [],
-        monthlySales: [],
-        recentSales: []
-      }
-    }
-
-    // Calcular estadísticas (con valores por defecto)
-    const totalSales = purchases.length
-    const totalRevenue = purchases.reduce((sum, p) => sum + (p.amount || 0), 0)
-    
-    // Usar platform_fee si existe, si no calcularlo
-    const platformFees = purchases.reduce((sum, p) => 
-      sum + (p.platform_fee || (p.amount * 0.25) || 0), 0)
-    
-    const creatorEarnings = purchases.reduce((sum, p) => 
-      sum + (p.creator_earnings || (p.amount * 0.75) || 0), 0)
-
-    // Ventas por obra (agrupando por work_id)
-    const salesByWorkMap = new Map()
-    
-    purchases.forEach(p => {
-      const workId = p.work_id
-      if (!salesByWorkMap.has(workId)) {
-        salesByWorkMap.set(workId, {
-          work_id: workId,
-          work_title: p.work_title || 'Obra sin título',
-          count: 0,
-          revenue: 0
-        })
-      }
-      const work = salesByWorkMap.get(workId)
-      work.count += 1
-      work.revenue += p.amount || 0
-    })
-    
-    const salesByWork = Array.from(salesByWorkMap.values())
-
-    // Ventas por mes (últimos 6 meses)
-    const last6Months = []
-    const now = new Date()
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const monthStr = date.toLocaleDateString('es', { month: 'short', year: 'numeric' })
+  // 📊 QUERY PARA ESTADÍSTICAS DE VENTAS (TODOS LOS ESTADOS)
+  const { data: salesStats, isLoading: loadingSales } = useQuery({
+    queryKey: ['sales', creatorData?.creator_id],
+    queryFn: async () => {
+      console.log('💰 INICIANDO QUERY DE VENTAS (TODOS LOS ESTADOS)')
+      console.log('👤 creatorData:', creatorData)
+      console.log('🆔 creator_id:', creatorData?.creator_id)
       
-      const monthPurchases = purchases.filter(p => {
-        const pDate = new Date(p.created_at)
-        return pDate.getMonth() === date.getMonth() && 
-               pDate.getFullYear() === date.getFullYear()
+      if (!creatorData?.creator_id) {
+        console.log('❌ No hay creator_id, cancelando query')
+        return null
+      }
+
+      console.log('💰 Buscando TODAS las ventas para creator:', creatorData.creator_id)
+
+      // 🔥 IMPORTANTE: Quitamos el filtro .eq('status', 'completed')
+      const { data: purchases, error } = await supabase
+        .from('purchases')
+        .select('*')
+        .eq('creator_id', creatorData.creator_id)
+        .order('created_at', { ascending: false })
+
+      console.log('📦 Ventas encontradas (todos los estados):', purchases)
+      console.log('❌ Error:', error)
+
+      if (error) {
+        console.error('❌ Error cargando ventas:', error)
+        return null
+      }
+
+      if (!purchases || purchases.length === 0) {
+        console.log('📭 No hay ventas para este creador')
+        return {
+          totalSales: 0,
+          totalRevenue: 0,
+          platformFees: 0,
+          creatorEarnings: 0,
+          completedSales: 0,
+          pendingSales: 0,
+          failedSales: 0,
+          salesByWork: [],
+          recentSales: []
+        }
+      }
+
+      // Separar por estados
+      const completed = purchases.filter(p => p.status === 'completed')
+      const pending = purchases.filter(p => p.status === 'pending')
+      const failed = purchases.filter(p => p.status === 'failed')
+
+      // Calcular estadísticas (solo completed para ingresos)
+      const totalSales = purchases.length
+      const completedSales = completed.length
+      const pendingSales = pending.length
+      const failedSales = failed.length
+      
+      const totalRevenue = completed.reduce((sum, p) => sum + (p.amount || 0), 0)
+      const platformFees = completed.reduce((sum, p) => sum + (p.amount * 0.25), 0)
+      const creatorEarnings = completed.reduce((sum, p) => sum + (p.amount * 0.75), 0)
+
+      // Ventas por obra (incluyendo todos los estados)
+      const salesByWork = purchases.reduce((acc: any, p) => {
+        const workId = p.work_id
+        if (!acc[workId]) {
+          acc[workId] = {
+            work_id: workId,
+            work_title: p.work_title || 'Obra sin título',
+            total: 0,
+            completed: 0,
+            pending: 0,
+            failed: 0,
+            revenue: 0
+          }
+        }
+        acc[workId].total += 1
+        if (p.status === 'completed') {
+          acc[workId].completed += 1
+          acc[workId].revenue += p.amount || 0
+        } else if (p.status === 'pending') {
+          acc[workId].pending += 1
+        } else if (p.status === 'failed') {
+          acc[workId].failed += 1
+        }
+        return acc
+      }, {})
+
+      // Últimas 5 ventas (todos los estados)
+      const recentSales = purchases.slice(0, 5).map(p => ({
+        id: p.id,
+        work_title: p.work_title || 'Obra sin título',
+        amount: p.amount,
+        buyer_email: p.buyer_email,
+        status: p.status,
+        created_at: p.created_at
+      }))
+
+      console.log('✅ Estadísticas calculadas:', {
+        totalSales,
+        completedSales,
+        pendingSales,
+        failedSales,
+        totalRevenue,
+        platformFees,
+        creatorEarnings,
+        salesByWork: Object.values(salesByWork),
+        recentSales
       })
 
-      last6Months.push({
-        month: monthStr,
-        sales: monthPurchases.length,
-        revenue: monthPurchases.reduce((sum, p) => sum + (p.amount || 0), 0)
-      })
-    }
-
-    // Últimas 5 ventas
-    const recentSales = purchases.slice(0, 5).map(p => ({
-      id: p.id,
-      work_title: p.work_title || 'Obra sin título',
-      amount: p.amount,
-      buyer_email: p.buyer_email,
-      created_at: p.created_at
-    }))
-
-    return {
-      totalSales,
-      totalRevenue,
-      platformFees,
-      creatorEarnings,
-      salesByWork,
-      monthlySales: last6Months,
-      recentSales
-    }
-  },
-  enabled: !!creatorData?.creator_id,
-  staleTime: 2 * 60 * 1000,
-})
+      return {
+        totalSales,
+        totalRevenue,
+        platformFees,
+        creatorEarnings,
+        completedSales,
+        pendingSales,
+        failedSales,
+        salesByWork: Object.values(salesByWork),
+        recentSales
+      }
+    },
+    enabled: !!creatorData?.creator_id,
+    staleTime: 2 * 60 * 1000,
+  })
 
   // Mutación para eliminar obra
   const deleteWorkMutation = useMutation({
@@ -594,186 +635,227 @@ const { data: salesStats, isLoading: loadingSales } = useQuery({
         </div>
       </div>
 
-      {/* 📊 ESTADÍSTICAS DE VENTAS */}
-{loadingSales ? (
-  <div style={{ textAlign: 'center', padding: '20px' }}>{t.search?.searching || 'Cargando...'}</div>
-) : salesStats && salesStats.totalSales > 0 ? (
-  <div style={{
-    background: 'white',
-    padding: '20px',
-    marginBottom: '30px',
-    border: '1px solid #eaeaea'
-  }}>
-    <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{salesText.title}</h3>
-    
-    {/* Tarjetas de resumen */}
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(4, 1fr)',
-      gap: '15px',
-      marginBottom: '25px'
-    }}>
-      <div style={{
-        background: '#f0f7ff',
-        padding: '15px',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
-          {salesStats.totalSales}
-        </div>
-        <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.totalSales}</div>
-      </div>
-      
-      <div style={{
-        background: '#f0f7ff',
-        padding: '15px',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
-          ${salesStats.totalRevenue.toFixed(2)}
-        </div>
-        <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.grossRevenue}</div>
-      </div>
-      
-      <div style={{
-        background: '#fff5f5',
-        padding: '15px',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc2626' }}>
-          ${salesStats.platformFees.toFixed(2)}
-        </div>
-        <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.platformFee}</div>
-      </div>
-      
-      <div style={{
-        background: '#e8f5e8',
-        padding: '15px',
-        textAlign: 'center'
-      }}>
-        <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2e7d32' }}>
-          ${salesStats.creatorEarnings.toFixed(2)}
-        </div>
-        <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.earnings}</div>
-      </div>
-    </div>
-
-    {/* Ventas por obra */}
-    {salesStats.salesByWork && salesStats.salesByWork.length > 0 && (
-      <>
-        <h4 style={{ marginBottom: '15px' }}>{salesText.byWork}</h4>
-        <div style={{ display: 'grid', gap: '10px', marginBottom: '25px' }}>
-          {salesStats.salesByWork
-            .sort((a: any, b: any) => b.revenue - a.revenue)
-            .map((work: any) => (
-              <div key={work.work_id} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '10px',
-                background: '#f9f9f9'
+      {/* 📊 ESTADÍSTICAS DE VENTAS - CON TODOS LOS ESTADOS */}
+      {loadingSales ? (
+        <div style={{ textAlign: 'center', padding: '20px' }}>{t.search?.searching || 'Cargando...'}</div>
+      ) : salesStats && salesStats.totalSales > 0 ? (
+        <div style={{
+          background: 'white',
+          padding: '20px',
+          marginBottom: '30px',
+          border: '1px solid #eaeaea'
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{salesText.title}</h3>
+          
+          {/* Tarjetas de resumen - AHORA CON PENDIENTES Y FALLIDAS */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '15px',
+            marginBottom: '25px'
+          }}>
+            <div style={{
+              background: '#f0f7ff',
+              padding: '15px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
+                {salesStats.totalSales}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.totalSales}</div>
+            </div>
+            
+            <div style={{
+              background: '#f0f7ff',
+              padding: '15px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
+                {salesStats.completedSales}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.completedSales || 'Completadas'}</div>
+            </div>
+            
+            <div style={{
+              background: salesStats.pendingSales > 0 ? '#fff3cd' : '#f5f5f5',
+              padding: '15px',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: '2rem', 
+                fontWeight: 'bold', 
+                color: salesStats.pendingSales > 0 ? '#856404' : '#4f46e5' 
               }}>
-                <span style={{ fontWeight: 500 }}>{work.work_title}</span>
-                <div>
-                  <span style={{
-                    background: '#4f46e5',
-                    color: 'white',
-                    padding: '2px 8px',
-                    fontSize: '0.8rem',
-                    marginRight: '8px'
-                  }}>
-                    {work.count} {work.count === 1 ? salesText.sale : salesText.sales}
-                  </span>
-                  <span style={{
-                    background: '#10b981',
-                    color: 'white',
-                    padding: '2px 8px',
-                    fontSize: '0.8rem'
-                  }}>
-                    ${work.revenue.toFixed(2)}
-                  </span>
-                </div>
+                {salesStats.pendingSales}
               </div>
-            ))}
-        </div>
-      </>
-    )}
-
-    {/* Ventas mensuales */}
-    {salesStats.monthlySales && salesStats.monthlySales.length > 0 && (
-      <>
-        <h4 style={{ marginBottom: '15px' }}>{salesText.byMonth}</h4>
-        <div style={{ display: 'grid', gap: '10px', marginBottom: '25px' }}>
-          {salesStats.monthlySales.map((month: any) => (
-            <div key={month.month} style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '10px',
-              background: '#f9f9f9'
-            }}>
-              <span style={{ fontWeight: 'bold' }}>{month.month}</span>
-              <div>
-                <span style={{
-                  background: '#4f46e5',
-                  color: 'white',
-                  padding: '2px 8px',
-                  fontSize: '0.8rem',
-                  marginRight: '8px'
-                }}>
-                  {month.sales} {month.sales === 1 ? salesText.sale : salesText.sales}
-                </span>
-                <span style={{
-                  background: '#10b981',
-                  color: 'white',
-                  padding: '2px 8px',
-                  fontSize: '0.8rem'
-                }}>
-                  ${month.revenue.toFixed(2)}
-                </span>
-              </div>
+              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.pendingSales || 'Pendientes'}</div>
             </div>
-          ))}
-        </div>
-      </>
-    )}
-
-    {/* Últimas ventas */}
-    {salesStats.recentSales && salesStats.recentSales.length > 0 && (
-      <>
-        <h4 style={{ marginBottom: '15px' }}>{salesText.recent}</h4>
-        <div style={{ display: 'grid', gap: '10px' }}>
-          {salesStats.recentSales.map((sale: any) => (
-            <div key={sale.id} style={{
-              padding: '10px',
-              background: '#f9f9f9'
+            
+            <div style={{
+              background: salesStats.failedSales > 0 ? '#f8d7da' : '#f5f5f5',
+              padding: '15px',
+              textAlign: 'center'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                <span style={{ fontWeight: 'bold' }}>{sale.work_title}</span>
-                <span style={{ color: '#2e7d32', fontWeight: 'bold' }}>${sale.amount?.toFixed(2)}</span>
+              <div style={{ 
+                fontSize: '2rem', 
+                fontWeight: 'bold', 
+                color: salesStats.failedSales > 0 ? '#721c24' : '#4f46e5' 
+              }}>
+                {salesStats.failedSales}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#666' }}>
-                <span>{salesText.buyer}: {sale.buyer_email}</span>
-                <span>{new Date(sale.created_at).toLocaleDateString()}</span>
-              </div>
+              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.failedSales || 'Fallidas'}</div>
             </div>
-          ))}
+          </div>
+
+          {/* Ingresos (solo completadas) */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '15px',
+            marginBottom: '25px'
+          }}>
+            <div style={{
+              background: '#f0f7ff',
+              padding: '15px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4f46e5' }}>
+                ${salesStats.totalRevenue.toFixed(2)}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.grossRevenue}</div>
+            </div>
+            
+            <div style={{
+              background: '#fff5f5',
+              padding: '15px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc2626' }}>
+                ${salesStats.platformFees.toFixed(2)}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.platformFee}</div>
+            </div>
+            
+            <div style={{
+              background: '#e8f5e8',
+              padding: '15px',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2e7d32' }}>
+                ${salesStats.creatorEarnings.toFixed(2)}
+              </div>
+              <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.earnings}</div>
+            </div>
+          </div>
+
+          {/* Ventas por obra */}
+          {salesStats.salesByWork && salesStats.salesByWork.length > 0 && (
+            <>
+              <h4 style={{ marginBottom: '15px' }}>{salesText.byWork}</h4>
+              <div style={{ display: 'grid', gap: '10px', marginBottom: '25px' }}>
+                {salesStats.salesByWork
+                  .sort((a: any, b: any) => b.total - a.total)
+                  .map((work: any) => (
+                    <div key={work.work_id} style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '10px',
+                      background: '#f9f9f9'
+                    }}>
+                      <span style={{ fontWeight: 500 }}>{work.work_title}</span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {work.completed > 0 && (
+                          <span style={{
+                            background: '#10b981',
+                            color: 'white',
+                            padding: '2px 8px',
+                            fontSize: '0.8rem'
+                          }}>
+                            ✅ {work.completed}
+                          </span>
+                        )}
+                        {work.pending > 0 && (
+                          <span style={{
+                            background: '#fbbf24',
+                            color: '#333',
+                            padding: '2px 8px',
+                            fontSize: '0.8rem'
+                          }}>
+                            ⏳ {work.pending}
+                          </span>
+                        )}
+                        {work.failed > 0 && (
+                          <span style={{
+                            background: '#ef4444',
+                            color: 'white',
+                            padding: '2px 8px',
+                            fontSize: '0.8rem'
+                          }}>
+                            ❌ {work.failed}
+                          </span>
+                        )}
+                        <span style={{
+                          background: '#4f46e5',
+                          color: 'white',
+                          padding: '2px 8px',
+                          fontSize: '0.8rem'
+                        }}>
+                          💰 ${work.revenue.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </>
+          )}
+
+          {/* Últimas ventas con estado */}
+          {salesStats.recentSales && salesStats.recentSales.length > 0 && (
+            <>
+              <h4 style={{ marginBottom: '15px' }}>{salesText.recent}</h4>
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {salesStats.recentSales.map((sale: any) => (
+                  <div key={sale.id} style={{
+                    padding: '10px',
+                    background: '#f9f9f9'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                      <span style={{ fontWeight: 'bold' }}>{sale.work_title}</span>
+                      <span style={{ 
+                        color: sale.status === 'completed' ? '#2e7d32' : 
+                               sale.status === 'pending' ? '#856404' : '#c62828',
+                        fontWeight: 'bold' 
+                      }}>
+                        {sale.status === 'completed' ? '✅ Completada' :
+                         sale.status === 'pending' ? '⏳ Pendiente' : '❌ Fallida'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#666' }}>
+                      <span>{salesText.buyer}: {sale.buyer_email}</span>
+                      <span>{salesText.amount}: ${sale.amount?.toFixed(2)}</span>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#999', marginTop: '4px' }}>
+                      {new Date(sale.created_at).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      </>
-    )}
-  </div>
-) : (
-  <div style={{
-    background: 'white',
-    padding: '20px',
-    marginBottom: '30px',
-    border: '1px solid #eaeaea',
-    textAlign: 'center'
-  }}>
-    <h3 style={{ marginTop: 0, marginBottom: '10px' }}>{salesText.title}</h3>
-    <p style={{ color: '#666' }}>{salesText.noSales}</p>
-  </div>
-)}
+      ) : (
+        <div style={{
+          background: 'white',
+          padding: '20px',
+          marginBottom: '30px',
+          border: '1px solid #eaeaea',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ marginTop: 0, marginBottom: '10px' }}>{salesText.title}</h3>
+          <p style={{ color: '#666' }}>{salesText.noSales}</p>
+        </div>
+      )}
 
       {/* Acciones rápidas */}
       <div style={{

@@ -63,22 +63,26 @@ export const es = {
   cancel: "Cancelar",
 
   // 👇 SALES DENTRO DE PROFILE
-  sales: {
-    title: "💰 Estadísticas de Ventas",
-    totalSales: "Ventas totales",
-    grossRevenue: "Ingresos brutos",
-    platformFee: "Comisión (25%)",
-    earnings: "Tus ganancias",
-    byWork: "Ventas por obra",
-    byMonth: "Ventas por mes",
-    recent: "Últimas ventas",
-    noSales: "Aún no tienes ventas. Cuando alguien compre tus obras, aparecerán aquí.",
-    sale: "venta",
-    sales: "ventas",
-    buyer: "Comprador",
-    date: "Fecha",
-    amount: "Monto"
-  }
+ sales: {
+  title: "💰 Estadísticas de Ventas",
+  totalSales: "Ventas totales",
+  completedSales: "Completadas",
+  pendingSales: "Pendientes",
+  failedSales: "Fallidas",
+  grossRevenue: "Ingresos brutos",
+  platformFee: "Comisión (25%)",
+  earnings: "Tus ganancias",
+  byWork: "Ventas por obra",
+  byMonth: "Ventas por mes",
+  recent: "Últimas ventas",
+  noSales: "Aún no tienes ventas. Cuando alguien compre tus obras, aparecerán aquí.",
+  sale: "venta",
+  sales: "ventas",
+  buyer: "Comprador",
+  date: "Fecha",
+  amount: "Monto",
+  status: "Estado"
+}
 },
   work: {
   visits: {

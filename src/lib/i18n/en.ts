@@ -64,24 +64,27 @@ export const en = {
   
   // 👇 SALES DENTRO DE PROFILE
   sales: {
-    title: "💰 Sales Statistics",
-    totalSales: "Total sales",
-    grossRevenue: "Gross revenue",
-    platformFee: "Platform fee (25%)",
-    earnings: "Your earnings",
-    byWork: "Sales by work",
-    byMonth: "Sales by month",
-    recent: "Recent sales",
-    noSales: "You don't have any sales yet. When someone purchases your works, they will appear here.",
-    sale: "sale",
-    sales: "sales",
-    buyer: "Buyer",
-    date: "Date",
-    amount: "Amount"
-  }
+  title: "💰 Sales Statistics",
+  totalSales: "Total sales",
+  completedSales: "Completed",
+  pendingSales: "Pending",
+  failedSales: "Failed",
+  grossRevenue: "Gross revenue",
+  platformFee: "Platform fee (25%)",
+  earnings: "Your earnings",
+  byWork: "Sales by work",
+  byMonth: "Sales by month",
+  recent: "Recent sales",
+  noSales: "You don't have any sales yet. When someone purchases your works, they will appear here.",
+  sale: "sale",
+  sales: "sales",
+  buyer: "Buyer",
+  date: "Date",
+  amount: "Amount",
+  status: "Status"
+}
 },
-
- work: {
+  work: {
   visits: {
     singular: "visit",
     plural: "visits"
