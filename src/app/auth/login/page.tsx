@@ -30,15 +30,36 @@ export default function LoginPage() {
     script.defer = true
     document.body.appendChild(script)
 
-    script.onload = () => {
-      window.google?.accounts.id.initialize({
-        client_id: '220485474651-6ilivjedvlvqnr1abehq5dnmutcu0q9s.apps.googleusercontent.com',
-        callback: handleGoogleCredential,
-        auto_select: true,
-        cancel_on_tap_outside: false,
-        context: 'signin',
-      })
-    }
+    // En tu useEffect de Google One Tap
+useEffect(() => {
+  const script = document.createElement('script')
+  script.src = 'https://accounts.google.com/gsi/client'
+  script.async = true
+  script.defer = true
+  document.body.appendChild(script)
+
+  script.onload = () => {
+    window.google?.accounts.id.initialize({
+      client_id: '220485474651-6ilivjedvlvqnr1abehq5dnmutcu0q9s.apps.googleusercontent.com',
+      callback: handleGoogleCredential,
+      auto_select: true,
+      cancel_on_tap_outside: false,
+      context: 'signin',
+      use_fedcm_for_prompt: true, // 👈 CLAVE PARA FEDCM
+    })
+  }
+
+  return () => {
+    document.body.removeChild(script)
+  }
+}, [])
+
+// Función handleGoogleLogin actualizada
+const handleGoogleLogin = async () => {
+  setTimeout(() => {
+    window.google?.accounts.id.prompt()
+  }, 100) // Pequeño timeout para evitar el error
+}
 
     return () => {
       document.body.removeChild(script)
