@@ -22,53 +22,20 @@ export default function LoginPage() {
   const supabase = createClient()
   const { t } = useLanguage()
 
-  // Inicializar Google One Tap
+  console.log('🔧 LoginPage cargada correctamente')
+
+  // Verificar variables de entorno
   useEffect(() => {
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-    document.body.appendChild(script)
-
-    // En tu useEffect de Google One Tap
-useEffect(() => {
-  const script = document.createElement('script')
-  script.src = 'https://accounts.google.com/gsi/client'
-  script.async = true
-  script.defer = true
-  document.body.appendChild(script)
-
-  script.onload = () => {
-    window.google?.accounts.id.initialize({
-      client_id: '220485474651-6ilivjedvlvqnr1abehq5dnmutcu0q9s.apps.googleusercontent.com',
-      callback: handleGoogleCredential,
-      auto_select: true,
-      cancel_on_tap_outside: false,
-      context: 'signin',
-      use_fedcm_for_prompt: true, // 👈 CLAVE PARA FEDCM
-    })
-  }
-
-  return () => {
-    document.body.removeChild(script)
-  }
-}, [])
-
-// Función handleGoogleLogin actualizada
-const handleGoogleLogin = async () => {
-  setTimeout(() => {
-    window.google?.accounts.id.prompt()
-  }, 100) // Pequeño timeout para evitar el error
-}
-
-    return () => {
-      document.body.removeChild(script)
-    }
+    console.log('📦 Variables de entorno:')
+    console.log('- NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Presente' : '❌ Ausente')
+    console.log('- NEXT_PUBLIC_SUPABASE_ANON_KEY:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Presente' : '❌ Ausente')
+    console.log('- NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:', process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? '✅ Presente' : '❌ Ausente')
   }, [])
 
   // Función para login con email/contraseña
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('🔐 Intentando login con email/contraseña')
     setLoading(true)
     setError(null)
 
@@ -80,17 +47,53 @@ const handleGoogleLogin = async () => {
 
       if (error) throw error
 
+      console.log('✅ Login exitoso, redirigiendo a profile')
       router.push('/profile')
       router.refresh()
     } catch (error: any) {
+      console.error('❌ Error en login:', error)
       setError(error.message || (t.auth?.loginError || 'Error al iniciar sesión'))
     } finally {
       setLoading(false)
     }
   }
 
-  // Función para Google One Tap
+  // Google One Tap
+  useEffect(() => {
+    console.log('🔧 Inicializando Google One Tap...')
+    
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = () => {
+      console.log('✅ Script de Google cargado correctamente')
+      try {
+        window.google?.accounts.id.initialize({
+          client_id: '220485474651-6ilivjedvlvqnr1abehq5dnmutcu0q9s.apps.googleusercontent.com',
+          callback: handleGoogleCredential,
+          auto_select: true,
+          cancel_on_tap_outside: false,
+          context: 'signin',
+          use_fedcm_for_prompt: true,
+        })
+        console.log('✅ Google One Tap inicializado')
+      } catch (err) {
+        console.error('❌ Error inicializando Google:', err)
+      }
+    }
+    script.onerror = () => {
+      console.error('❌ Error cargando script de Google')
+    }
+    document.body.appendChild(script)
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
+
   const handleGoogleCredential = async (response: any) => {
+    console.log('🔑 Credencial de Google recibida:', response)
     try {
       setLoading(true)
       
@@ -101,21 +104,25 @@ const handleGoogleLogin = async () => {
 
       if (error) throw error
 
+      console.log('✅ Login con Google exitoso')
       router.push('/profile')
       router.refresh()
     } catch (error: any) {
+      console.error('❌ Error en login con Google:', error)
       setError(error.message || 'Error al iniciar sesión con Google')
       setLoading(false)
     }
   }
 
-  // Función para mostrar One Tap manualmente
   const handleGoogleLogin = async () => {
-    window.google?.accounts.id.prompt()
+    console.log('🔑 Solicitando prompt de Google')
+    setTimeout(() => {
+      window.google?.accounts.id.prompt()
+    }, 100)
   }
 
-  // Función para login con Facebook
   const handleFacebookLogin = async () => {
+    console.log('🔵 Intentando login con Facebook')
     try {
       setLoading(true)
       const { error } = await supabase.auth.signInWithOAuth({
@@ -126,13 +133,14 @@ const handleGoogleLogin = async () => {
       })
       if (error) throw error
     } catch (error: any) {
+      console.error('❌ Error en login con Facebook:', error)
       setError(error.message || 'Error al conectar con Facebook')
       setLoading(false)
     }
   }
 
-  // Función para login con Apple
   const handleAppleLogin = async () => {
+    console.log('🍎 Intentando login con Apple')
     try {
       setLoading(true)
       const { error } = await supabase.auth.signInWithOAuth({
@@ -143,6 +151,7 @@ const handleGoogleLogin = async () => {
       })
       if (error) throw error
     } catch (error: any) {
+      console.error('❌ Error en login con Apple:', error)
       setError(error.message || 'Error al conectar con Apple')
       setLoading(false)
     }
