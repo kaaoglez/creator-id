@@ -21,12 +21,6 @@ export default function NavBar() {
   const { user } = useAuth();
   const { t, language, changeLanguage } = useLanguage();
 
-  // 👇 NUEVO: Cerrar menús cuando cambia la ruta
-  useEffect(() => {
-    setMenuOpen(false);
-    setUserMenuOpen(false);
-  }, [pathname]);
-
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -34,6 +28,12 @@ export default function NavBar() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Cerrar menús al cambiar de ruta
+  useEffect(() => {
+    setMenuOpen(false);
+    setUserMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (user?.email) {
@@ -87,6 +87,7 @@ export default function NavBar() {
   async function handleLogout() {
     await supabase.auth.signOut();
     setUserMenuOpen(false);
+    setMenuOpen(false);
     window.location.href = "/";
   }
 
@@ -108,7 +109,7 @@ export default function NavBar() {
         : 'linear-gradient(135deg, #4f46e5, #10b981)',
       backdropFilter: scrolled ? 'blur(10px)' : 'none',
       boxShadow: scrolled ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
-      padding: '1rem 2rem',
+      padding: '0.8rem 1rem', // Reducido padding en móviles
     }}>
       <div style={{
         maxWidth: '1200px',
@@ -118,20 +119,20 @@ export default function NavBar() {
         alignItems: 'center',
       }}>
         
-        {/* Logo */}
+        {/* Logo - más pequeño en móviles */}
         <Link href="/" style={{
           color: scrolled ? '#4f46e5' : 'white',
           textDecoration: 'none',
-          fontSize: '1.8rem',
+          fontSize: 'clamp(1.2rem, 5vw, 1.8rem)', // Responsive
           fontWeight: 'bold',
           transition: 'color 0.3s ease',
         }}>
           Creator-ID
         </Link>
 
-        {/* Desktop Menu */}
+        {/* Desktop Menu - oculto en móviles */}
         <div style={{ 
-          display: 'flex', 
+          display: 'none', 
           gap: '0.5rem', 
           alignItems: 'center',
         }} className="desktop-menu">
@@ -162,15 +163,15 @@ export default function NavBar() {
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '1rem',
+          gap: '0.5rem', // Reducido gap en móviles
         }}>
           
-          {/* Language selector */}
+          {/* Language selector - más compacto en móviles */}
           <div style={{ display: 'flex', gap: '2px' }}>
             <button
               onClick={() => changeLanguage('es')}
               style={{
-                padding: '4px 8px',
+                padding: '4px 6px', // Reducido padding
                 background: language === 'es' 
                   ? (scrolled ? '#4f46e5' : 'rgba(255,255,255,0.3)')
                   : (scrolled ? '#eaeaea' : 'rgba(255,255,255,0.1)'),
@@ -179,7 +180,7 @@ export default function NavBar() {
                   : (scrolled ? '#333' : 'rgba(255,255,255,0.8)'),
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '0.9rem',
+                fontSize: '0.8rem', // Más pequeño
                 fontWeight: language === 'es' ? 'bold' : 'normal'
               }}
             >
@@ -188,7 +189,7 @@ export default function NavBar() {
             <button
               onClick={() => changeLanguage('en')}
               style={{
-                padding: '4px 8px',
+                padding: '4px 6px',
                 background: language === 'en' 
                   ? (scrolled ? '#4f46e5' : 'rgba(255,255,255,0.3)')
                   : (scrolled ? '#eaeaea' : 'rgba(255,255,255,0.1)'),
@@ -197,7 +198,7 @@ export default function NavBar() {
                   : (scrolled ? '#333' : 'rgba(255,255,255,0.8)'),
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '0.9rem',
+                fontSize: '0.8rem',
                 fontWeight: language === 'en' ? 'bold' : 'normal'
               }}
             >
@@ -205,29 +206,27 @@ export default function NavBar() {
             </button>
           </div>
 
-          {/* Indicador de perfil incompleto */}
+          {/* Indicador de perfil incompleto - versión móvil más compacta */}
           {user && !hasCreatorId && (
             <Link
               href="/register"
               style={{
-                padding: '4px 12px',
+                padding: '4px 8px',
                 background: '#fbbf24',
                 color: '#1f2937',
                 textDecoration: 'none',
-                fontSize: '0.8rem',
+                fontSize: '0.7rem', // Más pequeño
                 fontWeight: 'bold',
                 whiteSpace: 'nowrap',
                 transition: 'all 0.2s'
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = '#f59e0b'}
-              onMouseOut={(e) => e.currentTarget.style.background = '#fbbf24'}
             >
-              ⚡ {t.nav?.completeProfile || 'Completar perfil'}
+              ⚡
             </Link>
           )}
 
           {!user && (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'none', gap: '0.5rem' }} className="desktop-menu">
               <NavLink href="/auth/register" isActive={isActive('/auth/register')} scrolled={scrolled}>
                 {t.nav.register}
               </NavLink>
@@ -246,38 +245,27 @@ export default function NavBar() {
                     ? (scrolled ? 'rgba(79, 70, 229, 0.1)' : 'rgba(255,255,255,0.2)')
                     : (scrolled ? 'transparent' : 'rgba(255,255,255,0.1)'),
                   border: scrolled ? '1px solid #eaeaea' : '1px solid rgba(255,255,255,0.2)',
-                  padding: '0.5rem 1.2rem',
+                  padding: '0.4rem 0.8rem', // Reducido padding
                   color: scrolled ? '#1f2937' : 'white',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '4px',
                   transition: 'all 0.2s',
                   fontWeight: 500,
-                  fontSize: '0.95rem',
-                }}
-                onMouseOver={(e) => {
-                  if (!scrolled) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.25)';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!scrolled) {
-                    e.currentTarget.style.background = userMenuOpen 
-                      ? 'rgba(255,255,255,0.2)' 
-                      : 'rgba(255,255,255,0.1)';
-                  }
+                  fontSize: '0.85rem', // Más pequeño
                 }}
               >
-                <span>👤</span>
-                <span>{creatorName || 'Usuario'}</span>
+                <span style={{ fontSize: '1rem' }}>👤</span>
+                <span className="username">{creatorName?.split(' ')[0] || 'User'}</span>
                 <span style={{ 
-                  fontSize: '0.7rem',
+                  fontSize: '0.6rem',
                   transition: 'transform 0.2s',
                   transform: userMenuOpen ? 'rotate(180deg)' : 'none'
                 }}>▼</span>
               </button>
 
+              {/* Menú desplegable - mismo ancho en móvil */}
               {userMenuOpen && (
                 <div style={{
                   position: 'absolute',
@@ -286,18 +274,32 @@ export default function NavBar() {
                   marginTop: '8px',
                   background: 'white',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                  minWidth: '200px',
+                  minWidth: '180px',
                   overflow: 'hidden',
                   border: '1px solid #eaeaea',
+                  zIndex: 1000
                 }}>
-                  <DropdownItem href="/profile" icon="👤">
+                  <DropdownItem 
+                    href="/profile" 
+                    icon="👤"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
                     {t.nav.profile}
                   </DropdownItem>
-                  <DropdownItem href="/messages" icon="📬" badge={unreadCount}>
+                  <DropdownItem 
+                    href="/messages" 
+                    icon="📬" 
+                    badge={unreadCount}
+                    onClick={() => setUserMenuOpen(false)}
+                  >
                     {t.nav.messages}
                   </DropdownItem>
                   {creatorId && (
-                    <DropdownItem href={`/${creatorId}`} icon="🌐">
+                    <DropdownItem 
+                      href={`/${creatorId}`} 
+                      icon="🌐"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
                       {t.nav.publicProfile}
                     </DropdownItem>
                   )}
@@ -313,7 +315,7 @@ export default function NavBar() {
                       background: 'none',
                       border: 'none',
                       color: '#ef4444',
-                      fontSize: '0.95rem',
+                      fontSize: '0.9rem',
                       fontWeight: 500,
                       cursor: 'pointer',
                       transition: 'background 0.2s',
@@ -322,7 +324,7 @@ export default function NavBar() {
                     onMouseOver={(e) => e.currentTarget.style.background = '#fef2f2'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'white'}
                   >
-                    <span style={{ fontSize: '1.1rem' }}>🔒</span>
+                    <span style={{ fontSize: '1rem' }}>🔒</span>
                     {t.nav.logout}
                   </button>
                 </div>
@@ -330,152 +332,199 @@ export default function NavBar() {
             </div>
           )}
 
-          {/* Mobile menu button */}
+          {/* Mobile menu button - siempre visible en móviles */}
           <button 
             onClick={() => setMenuOpen(!menuOpen)}
             style={{
-              display: 'none',
+              display: 'block',
               background: 'none',
               border: 'none',
               color: scrolled ? '#4f46e5' : 'white',
-              fontSize: '1.5rem',
+              fontSize: '1.8rem',
               cursor: 'pointer',
-              padding: '0.5rem',
+              padding: '0.3rem',
+              lineHeight: '1'
             }}
             className="mobile-menu-button"
           >
-            ☰
+            {menuOpen ? '✕' : '☰'}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
+      {/* Mobile menu - mejorado */}
       {menuOpen && (
         <div style={{
-          display: 'none',
-          flexDirection: 'column',
-          gap: '0.5rem',
-          padding: '1rem',
-          marginTop: '1rem',
+          position: 'fixed',
+          top: '60px',
+          left: 0,
+          right: 0,
+          bottom: 0,
           background: 'white',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-          border: '1px solid #eaeaea',
-        }} className="mobile-menu">
-          <MobileLink href="/" onClick={() => setMenuOpen(false)}>
-            {t.nav.home}
-          </MobileLink>
-          {!user && (
-            <>
-              <MobileLink href="/auth/register" onClick={() => setMenuOpen(false)}>
-                {t.nav.register}
-              </MobileLink>
-              <MobileLink href="/auth/login" onClick={() => setMenuOpen(false)}>
-                {t.nav.login}
-              </MobileLink>
-            </>
-          )}
-          {user && (
-            <>
-              <MobileLink href="/search" onClick={() => setMenuOpen(false)}>
-                {t.nav.search}
-              </MobileLink>
-              <MobileLink href="/verify" onClick={() => setMenuOpen(false)}>
-                {t.nav.verify}
-              </MobileLink>
-              {hasCreatorId && (
-                <MobileLink href="/works/new" onClick={() => setMenuOpen(false)}>
-                  {t.nav.registerWork}
+          padding: '1rem',
+          overflowY: 'auto',
+          zIndex: 999,
+          animation: 'slideIn 0.3s ease'
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.5rem',
+          }}>
+            <MobileLink href="/" onClick={() => setMenuOpen(false)}>
+              🏠 {t.nav.home}
+            </MobileLink>
+            
+            {!user && (
+              <>
+                <MobileLink href="/auth/register" onClick={() => setMenuOpen(false)}>
+                  📝 {t.nav.register}
                 </MobileLink>
-              )}
-              
-              {/* Indicador de perfil incompleto en móvil */}
-              {!hasCreatorId && (
-                <MobileLink href="/register" onClick={() => setMenuOpen(false)}>
-                  ⚡ {t.nav?.completeProfile || 'Completar perfil'}
+                <MobileLink href="/auth/login" onClick={() => setMenuOpen(false)}>
+                  🔑 {t.nav.login}
                 </MobileLink>
-              )}
-              
-              <div style={{ height: '1px', background: '#eaeaea', margin: '8px 0' }} />
-              <MobileLink href="/profile" onClick={() => setMenuOpen(false)}>
-                👤 {t.nav.profile}
-              </MobileLink>
-              <MobileLink href="/messages" onClick={() => setMenuOpen(false)}>
-                📬 {t.nav.messages} {unreadCount > 0 && `(${unreadCount})`}
-              </MobileLink>
-              {creatorId && (
-                <MobileLink href={`/${creatorId}`} onClick={() => setMenuOpen(false)}>
-                  🌐 {t.nav.publicProfile}
+              </>
+            )}
+            
+            {user && (
+              <>
+                <div style={{ 
+                  padding: '1rem',
+                  background: '#f3f4f6',
+                  marginBottom: '0.5rem'
+                }}>
+                  <div style={{ fontWeight: 'bold' }}>{creatorName || 'Usuario'}</div>
+                  {creatorId && <div style={{ fontSize: '0.8rem', color: '#666' }}>ID: {creatorId}</div>}
+                </div>
+
+                <MobileLink href="/search" onClick={() => setMenuOpen(false)}>
+                  🔍 {t.nav.search}
                 </MobileLink>
-              )}
+                <MobileLink href="/verify" onClick={() => setMenuOpen(false)}>
+                  ✅ {t.nav.verify}
+                </MobileLink>
+                
+                {hasCreatorId && (
+                  <MobileLink href="/works/new" onClick={() => setMenuOpen(false)}>
+                    ➕ {t.nav.registerWork}
+                  </MobileLink>
+                )}
+                
+                {!hasCreatorId && (
+                  <MobileLink href="/register" onClick={() => setMenuOpen(false)}>
+                    ⚡ {t.nav?.completeProfile || 'Completar perfil'}
+                  </MobileLink>
+                )}
+                
+                <div style={{ height: '1px', background: '#eaeaea', margin: '1rem 0' }} />
+                
+                <MobileLink href="/profile" onClick={() => setMenuOpen(false)}>
+                  👤 {t.nav.profile}
+                </MobileLink>
+                <MobileLink href="/messages" onClick={() => setMenuOpen(false)}>
+                  📬 {t.nav.messages} {unreadCount > 0 && `(${unreadCount})`}
+                </MobileLink>
+                {creatorId && (
+                  <MobileLink href={`/${creatorId}`} onClick={() => setMenuOpen(false)}>
+                    🌐 {t.nav.publicProfile}
+                  </MobileLink>
+                )}
+                
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    padding: '1rem',
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    border: 'none',
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    width: '100%',
+                    textAlign: 'left',
+                    marginTop: '0.5rem'
+                  }}
+                >
+                  🔒 {t.nav.logout}
+                </button>
+              </>
+            )}
+            
+            {/* Language selector in mobile */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '2px', 
+              borderTop: '1px solid #eaeaea',
+              paddingTop: '1rem',
+              marginTop: '1rem'
+            }}>
               <button
-                onClick={handleLogout}
+                onClick={() => {
+                  changeLanguage('es');
+                  setMenuOpen(false);
+                }}
                 style={{
+                  flex: 1,
                   padding: '12px',
-                  background: '#fef2f2',
-                  color: '#ef4444',
+                  background: language === 'es' ? '#4f46e5' : '#eaeaea',
+                  color: language === 'es' ? 'white' : '#333',
                   border: 'none',
-                  fontSize: '1rem',
-                  fontWeight: 500,
                   cursor: 'pointer',
-                  width: '100%',
-                  textAlign: 'left',
+                  fontWeight: language === 'es' ? 'bold' : 'normal'
                 }}
               >
-                🔒 {t.nav.logout}
+                Español
               </button>
-            </>
-          )}
-          
-          {/* Language selector in mobile */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '2px', 
-            borderTop: '1px solid #eaeaea',
-            paddingTop: '1rem',
-            marginTop: '0.5rem'
-          }}>
-            <button
-              onClick={() => changeLanguage('es')}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: language === 'es' ? '#4f46e5' : '#eaeaea',
-                color: language === 'es' ? 'white' : '#333',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: language === 'es' ? 'bold' : 'normal'
-              }}
-            >
-              ES
-            </button>
-            <button
-              onClick={() => changeLanguage('en')}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: language === 'en' ? '#4f46e5' : '#eaeaea',
-                color: language === 'en' ? 'white' : '#333',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: language === 'en' ? 'bold' : 'normal'
-              }}
-            >
-              EN
-            </button>
+              <button
+                onClick={() => {
+                  changeLanguage('en');
+                  setMenuOpen(false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  background: language === 'en' ? '#4f46e5' : '#eaeaea',
+                  color: language === 'en' ? 'white' : '#333',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: language === 'en' ? 'bold' : 'normal'
+                }}
+              >
+                English
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       <style>{`
-        @media (max-width: 768px) {
+        @media (min-width: 769px) {
           .desktop-menu {
-            display: none !important;
+            display: flex !important;
           }
           .mobile-menu-button {
-            display: block !important;
+            display: none !important;
           }
-          .mobile-menu {
-            display: flex !important;
+          .username {
+            display: inline;
+          }
+        }
+        @media (max-width: 768px) {
+          .username {
+            display: none;
+          }
+          nav {
+            padding: 0.5rem !important;
+          }
+        }
+        @keyframes slideIn {
+          from {
+            transform: translateY(-10px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
           }
         }
       `}</style>
@@ -483,7 +532,7 @@ export default function NavBar() {
   );
 }
 
-// Componentes auxiliares
+// Componentes auxiliares (sin cambios)
 function NavLink({ href, children, isActive, scrolled }: any) {
   return (
     <Link
@@ -518,10 +567,11 @@ function NavLink({ href, children, isActive, scrolled }: any) {
   );
 }
 
-function DropdownItem({ href, icon, children, badge }: any) {
+function DropdownItem({ href, icon, children, badge, onClick }: any) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -560,9 +610,12 @@ function MobileLink({ href, onClick, children }: any) {
       style={{
         color: '#1f2937',
         textDecoration: 'none',
-        padding: '12px',
+        padding: '12px 16px',
         transition: 'background 0.2s',
-        display: 'block',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        fontSize: '1rem',
       }}
       onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
       onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
