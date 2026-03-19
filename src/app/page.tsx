@@ -610,7 +610,7 @@ export default function HomePage() {
             </div>
             <h3 style={{ marginBottom: "15px", color: "white" }}>Royalty para Creadores</h3>
             <p style={{ color: "rgba(255,255,255,0.9)", lineHeight: "1.6" }}>
-              Gana un 5% de regalías por cada venta de tus obras. Tu creatividad, tu recompensa.
+              Gana un 75% de regalías por cada venta de tus obras. Tu creatividad, tu recompensa.
             </p>
             <div style={{
               marginTop: "20px",
@@ -619,7 +619,7 @@ export default function HomePage() {
               fontSize: "1.5rem",
               fontWeight: "bold"
             }}>
-              5% Royalty
+              75% Royalty
             </div>
           </div>
           
@@ -659,7 +659,7 @@ export default function HomePage() {
           maxWidth: "600px",
           margin: "0 auto 30px"
         }}>
-          Únete a nuestra comunidad de creadores, obtén tu Creator ID único y comienza a ganar el 5% de regalías por tus obras.
+          Únete a nuestra comunidad de creadores, obtén tu Creator ID único y comienza a ganar el 75% de regalías por tus obras.
         </p>
         <div style={{
           display: 'flex',
