@@ -715,21 +715,6 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
-
-        {/* Copyright */}
-        <div style={{
-          borderTop: '1px solid #e0e0e0',
-          paddingTop: '20px',
-          textAlign: 'center',
-          color: '#999',
-          fontSize: '0.9rem'
-        }}>
-          <p>© {new Date().getFullYear()} Creator-ID. {t.profile?.footer?.rights || 'Todos los derechos reservados.'}</p>
-          <p style={{ marginTop: '5px', fontSize: '0.8rem' }}>
-            {t.profile?.footer?.madeWith || 'Hecho con ❤️ para la comunidad de creadores'}
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
