@@ -3,6 +3,7 @@ import { AuthProvider } from "@/components/providers/AuthProvider";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { Providers } from "./providers";
 import ClientLayout from "./ClientLayout";
+import Footer from "@/components/Footer"; // 👈 IMPORTAMOS EL FOOTER
 
 export const metadata: Metadata = {
   title: "Creator ID Platform",
@@ -35,7 +36,10 @@ export default function RootLayout({
       <body style={{ 
         margin: 0, 
         fontFamily: "sans-serif",
-        backgroundColor: "#f5f5f5"
+        backgroundColor: "#f5f5f5",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh"
       }}>
         <LanguageProvider>
           <AuthProvider>
@@ -44,11 +48,14 @@ export default function RootLayout({
                 <main style={{ 
                   maxWidth: "1200px", 
                   margin: "0 auto", 
-                  padding: "80px 20px 20px 20px",
-                  minHeight: "calc(100vh - 160px)"
+                  padding: "80px 20px 40px 20px",
+                  flex: 1,
+                  width: "100%"
                 }}>
                   {children}
                 </main>
+                {/* Footer al final de todo */}
+                <Footer />
               </ClientLayout>
             </Providers>
           </AuthProvider>
