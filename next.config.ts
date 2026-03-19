@@ -5,9 +5,11 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'jlyzlxeclinpbpgeerjc.supabase.co',
-        port: '',
-        pathname: '/storage/v1/object/public/**',
+        hostname: '**.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.vercel.app',
       },
     ],
   },

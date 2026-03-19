@@ -78,7 +78,7 @@ export default function VerifyPage() {
   }, [selectedCreator])
 
   return (
-    <div style={{ maxWidth: '600px', margin: '40px auto', padding: '0 20px' }}>
+    <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px' }}>
       <h1 style={{ 
         fontSize: '2rem', 
         marginBottom: '30px',

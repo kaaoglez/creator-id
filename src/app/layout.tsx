@@ -34,33 +34,33 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
       </head>
       <body style={{ 
-        margin: 0, 
-        fontFamily: "sans-serif",
-        backgroundColor: "#f5f5f5",
-        display: "flex",
-        flexDirection: "column",
-        minHeight: "100vh"
-      }}>
-        <LanguageProvider>
-          <AuthProvider>
-            <Providers>
-              <ClientLayout>
-                <main style={{ 
-                  maxWidth: "1200px", 
-                  margin: "0 auto", 
-                  padding: "80px 20px 40px 20px",
-                  flex: 1,
-                  width: "100%"
-                }}>
-                  {children}
-                </main>
-                {/* Footer al final de todo */}
-                <Footer />
-              </ClientLayout>
-            </Providers>
-          </AuthProvider>
-        </LanguageProvider>
-      </body>
+  margin: 0, 
+  fontFamily: "sans-serif",
+  backgroundColor: "#f5f5f5",
+  flexDirection: "column",
+  minHeight: "100vh"
+}}>
+  <LanguageProvider>
+    <AuthProvider>
+      <Providers>
+        <ClientLayout>
+          {/* El contenido principal con su propio ancho */}
+          <div style={{
+            maxWidth: "1200px",
+            margin: "0 auto",
+            padding: "80px 20px 40px 20px",
+            width: "100%",
+            flex: 1
+          }}>
+            {children}
+          </div>
+          {/* Footer FUERA del contenedor centrado */}
+          <Footer />
+        </ClientLayout>
+      </Providers>
+    </AuthProvider>
+  </LanguageProvider>
+</body>
     </html>
   );
 }

@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import WorkCard from '@/components/WorkCard'
 import { useLanguage } from '@/contexts/LanguageContext'
+import Image from 'next/image'
 
 export default function ProfilePage() {
   const { user, loading, signOut } = useAuth()
@@ -382,7 +383,7 @@ const deleteAccountMutation = useMutation({
   // Estados de carga y error
   if (loading) {
     return (
-      <div style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: "0 20px", textAlign: 'center' }}>
         <p>{t.search?.searching || 'Cargando...'}</p>
       </div>
     )
@@ -495,33 +496,34 @@ const deleteAccountMutation = useMutation({
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           {/* Foto al lado del título */}
           {creatorData?.avatar_url ? (
-            <img
-              src={creatorData.avatar_url}
-              alt={fullName}
-              style={{
-                width: '60px',
-                height: '60px',
-                borderRadius: '50%',
-                objectFit: 'cover',
-                border: '2px solid #4f46e5'
-              }}
-            />
-          ) : (
-            <div style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-              color: 'white',
-              fontWeight: 'bold'
-            }}>
-              {creatorData?.full_first_name?.charAt(0) || '👤'}
-            </div>
-          )}
+  <Image
+    src={creatorData.avatar_url}
+    alt={fullName}
+    width={60}
+    height={60}
+    style={{
+      borderRadius: '50%',
+      objectFit: 'cover',
+      border: '2px solid #4f46e5'
+    }}
+    priority // La foto del perfil es importante
+  />
+) : (
+  <div style={{
+    width: '60px',
+    height: '60px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '24px',
+    color: 'white',
+    fontWeight: 'bold'
+  }}>
+    {creatorData?.full_first_name?.charAt(0) || '👤'}
+  </div>
+)}
           <h1 style={{ 
             fontSize: '2rem', 
             margin: 0,

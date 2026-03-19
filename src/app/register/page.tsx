@@ -229,7 +229,7 @@ export default function Register() {
         margin: "40px auto", 
         textAlign: "center",
         fontFamily: "sans-serif",
-        padding: "40px"
+        padding: "0 20px"
       }}>
         <div style={{
           border: "3px solid #f3f3f3",

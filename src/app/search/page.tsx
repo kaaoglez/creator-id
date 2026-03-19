@@ -91,12 +91,11 @@ export default function SearchPage() {
   }, [router]);
 
   return (
-    <div style={{ 
-      maxWidth: "800px", 
-      margin: "40px auto", 
-      padding: "0 20px",
-      fontFamily: "sans-serif" 
-    }}>
+  <div style={{ 
+    maxWidth: "1200px", 
+    margin: "0 auto",
+    padding: "0 20px"
+  }}>
       
       <h1 style={{ 
         fontSize: "2.5rem", 

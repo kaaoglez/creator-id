@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { useLanguage } from '@/contexts/LanguageContext'
+import Image from 'next/image'
 
 export default function EditProfilePage() {
   const { user, loading } = useAuth()
@@ -304,33 +305,33 @@ export default function EditProfilePage() {
             {/* Preview del avatar */}
             <div style={{ textAlign: 'center' }}>
               {avatarPreview ? (
-                <img
-                  src={avatarPreview}
-                  alt="Avatar preview"
-                  style={{
-                    width: '120px',
-                    height: '120px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '3px solid #4f46e5'
-                  }}
-                />
-              ) : (
-                <div style={{
-                  width: '120px',
-                  height: '120px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '48px',
-                  color: 'white',
-                  fontWeight: 'bold'
-                }}>
-                  {formData.full_first_name?.charAt(0) || '👤'}
-                </div>
-              )}
+  <Image
+    src={avatarPreview}
+    alt="Avatar preview"
+    width={120}
+    height={120}
+    style={{
+      borderRadius: '50%',
+      objectFit: 'cover',
+      border: '3px solid #4f46e5'
+    }}
+  />
+) : (
+  <div style={{
+    width: '120px',
+    height: '120px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '48px',
+    color: 'white',
+    fontWeight: 'bold'
+  }}>
+    {formData.full_first_name?.charAt(0) || '👤'}
+  </div>
+)}
             </div>
 
             {/* Input para subir avatar */}
