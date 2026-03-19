@@ -21,6 +21,12 @@ export default function NavBar() {
   const { user } = useAuth();
   const { t, language, changeLanguage } = useLanguage();
 
+  // 👇 NUEVO: Cerrar menús cuando cambia la ruta
+  useEffect(() => {
+    setMenuOpen(false);
+    setUserMenuOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
