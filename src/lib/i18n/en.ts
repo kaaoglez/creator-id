@@ -93,6 +93,26 @@ export const en = {
       date: "Date",
       amount: "Amount",
       status: "Status"
+    },
+     footer: {
+      description: "Create your unique identity as a creator and share your public profile easily.",
+      quickLinks: "Quick Links",
+      home: "Home",
+      search: "Search Creators",
+      createId: "Create Creator ID",
+      registerWork: "Register Work",
+      support: "Support",
+      faq: "FAQ",
+      contact: "Contact",
+      terms: "Terms of Use",
+      privacy: "Privacy Policy",
+      community: "Community",
+      creators: "Creators",
+      works: "Works",
+      countries: "Countries",
+      royalty: "Royalty for creators",
+      rights: "All rights reserved.",
+      madeWith: "Made with ❤️ for the creator community"
     }
   },
   work: {

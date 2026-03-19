@@ -5,7 +5,42 @@ import { es } from '@/lib/i18n/es'
 import { en } from '@/lib/i18n/en'
 
 type Language = 'es' | 'en'
-type Texts = typeof es
+
+// Definir el tipo completo basado en es
+type Texts = {
+  nav: typeof es.nav;
+  home: typeof es.home;
+  profile: typeof es.profile & {
+    footer: {
+      description: string;
+      quickLinks: string;
+      home: string;
+      search: string;
+      createId: string;
+      registerWork: string;
+      support: string;
+      faq: string;
+      contact: string;
+      terms: string;
+      privacy: string;
+      community: string;
+      creators: string;
+      works: string;
+      countries: string;
+      royalty: string;
+      rights: string;
+      madeWith: string;
+    }
+  };
+  work: typeof es.work;
+  works: typeof es.works;
+  search: typeof es.search;
+  messages: typeof es.messages;
+  auth: typeof es.auth;
+  register: typeof es.register;
+  verify: typeof es.verify;
+  errors: typeof es.errors;
+}
 
 interface LanguageContextType {
   language: Language
@@ -37,7 +72,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('language', lang)
   }
 
-  const t = language === 'es' ? es : en
+  // Hacemos un cast para que TypeScript sepa que en tiene la misma estructura que es
+  const t = (language === 'es' ? es : en) as Texts
 
   return (
     <LanguageContext.Provider value={{ language, t, changeLanguage }}>

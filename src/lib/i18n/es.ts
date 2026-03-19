@@ -93,6 +93,26 @@ export const es = {
       date: "Fecha",
       amount: "Monto",
       status: "Estado"
+    },
+    footer: {
+      description: "Crea tu identidad única como creador y comparte tu perfil público fácilmente.",
+      quickLinks: "Enlaces Rápidos",
+      home: "Inicio",
+      search: "Buscar Creadores",
+      createId: "Crear Creator ID",
+      registerWork: "Registrar Obra",
+      support: "Soporte",
+      faq: "Preguntas Frecuentes",
+      contact: "Contacto",
+      terms: "Términos de Uso",
+      privacy: "Política de Privacidad",
+      community: "Comunidad",
+      creators: "Creadores",
+      works: "Obras",
+      countries: "Países",
+      royalty: "Royalty para creadores",
+      rights: "Todos los derechos reservados.",
+      madeWith: "Hecho con ❤️ para la comunidad de creadores"
     }
   },
   work: {
