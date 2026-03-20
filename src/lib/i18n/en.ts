@@ -257,5 +257,13 @@ export const en = {
     countryNotFound: "Country not found",
     creatorExists: "Error creating Creator ID. You might already have one.",
     priceNegative: "The price cannot be negative"
+  },
+ shop: {
+    title: "Art Shop",
+    available: "works available",
+    empty: "No works registered yet.",
+    first: "Register first work",
+    contact: "Contact",
+    details: "View details"
   }
 }

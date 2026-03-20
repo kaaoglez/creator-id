@@ -257,5 +257,13 @@ export const es = {
     countryNotFound: "País no encontrado",
     creatorExists: "Error creando Creator ID. Puede que ya tengas uno.",
     priceNegative: "El precio no puede ser negativo",
+  },
+  hop: {
+    title: "Tienda de Obras",
+    available: "obras disponibles",
+    empty: "No hay obras registradas aún.",
+    first: "Registrar primera obra",
+    contact: "Contactar",
+    details: "Ver detalles"
   }
 }
