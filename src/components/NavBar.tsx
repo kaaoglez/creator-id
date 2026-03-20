@@ -143,6 +143,10 @@ export default function NavBar() {
           
           {user && (
             <>
+            <NavLink href="/shop" isActive={isActive('/shop')} scrolled={scrolled}>
+      🛍️ Tienda
+    </NavLink>
+
               <NavLink href="/search" isActive={isActive('/search')} scrolled={scrolled}>
                 {t.nav.search}
               </NavLink>
@@ -352,7 +356,7 @@ export default function NavBar() {
         </div>
       </div>
 
-      {/* Mobile menu - mejorado */}
+            {/* Mobile menu - MEJORADO PARA MÁS OPCIONES */}
       {menuOpen && (
         <div style={{
           position: 'fixed',
@@ -361,7 +365,7 @@ export default function NavBar() {
           right: 0,
           bottom: 0,
           background: 'white',
-          padding: '1rem',
+          padding: '20px',
           overflowY: 'auto',
           zIndex: 999,
           animation: 'slideIn 0.3s ease'
@@ -369,129 +373,226 @@ export default function NavBar() {
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.5rem',
+            gap: '8px'
           }}>
-            <MobileLink href="/" onClick={() => setMenuOpen(false)}>
-              🏠 {t.nav.home}
-            </MobileLink>
-            
-            {!user && (
-              <>
-                <MobileLink href="/auth/register" onClick={() => setMenuOpen(false)}>
-                  📝 {t.nav.register}
-                </MobileLink>
-                <MobileLink href="/auth/login" onClick={() => setMenuOpen(false)}>
-                  🔑 {t.nav.login}
-                </MobileLink>
-              </>
-            )}
-            
-            {user && (
-              <>
-                <div style={{ 
-                  padding: '1rem',
-                  background: '#f3f4f6',
-                  marginBottom: '0.5rem'
-                }}>
-                  <div style={{ fontWeight: 'bold' }}>{creatorName || 'Usuario'}</div>
-                  {creatorId && <div style={{ fontSize: '0.8rem', color: '#666' }}>ID: {creatorId}</div>}
-                </div>
+            {/* Enlaces principales */}
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{
+                padding: '8px 0',
+                color: '#666',
+                fontSize: '0.7rem',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>
+                Principal
+              </div>
+              <MobileLink href="/" onClick={() => setMenuOpen(false)}>
+                🏠 Inicio
+              </MobileLink>
+              <MobileLink href="/shop" onClick={() => setMenuOpen(false)}>
+                🛍️ Tienda
+              </MobileLink>
+            </div>
 
+            {/* Enlaces de búsqueda */}
+            {user && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{
+                  padding: '8px 0',
+                  color: '#666',
+                  fontSize: '0.7rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>
+                  Explorar
+                </div>
                 <MobileLink href="/search" onClick={() => setMenuOpen(false)}>
-                  🔍 {t.nav.search}
+                  🔍 Buscar
                 </MobileLink>
                 <MobileLink href="/verify" onClick={() => setMenuOpen(false)}>
-                  ✅ {t.nav.verify}
+                  ✅ Verificar
                 </MobileLink>
-                
-                {hasCreatorId && (
-                  <MobileLink href="/works/new" onClick={() => setMenuOpen(false)}>
-                    ➕ {t.nav.registerWork}
+              </div>
+            )}
+
+            {/* Enlaces de usuario (no autenticado) */}
+            {!user && (
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{
+                  padding: '8px 0',
+                  color: '#666',
+                  fontSize: '0.7rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>
+                  Acceso
+                </div>
+                <MobileLink href="/auth/register" onClick={() => setMenuOpen(false)}>
+                  📝 Registrarse
+                </MobileLink>
+                <MobileLink href="/auth/login" onClick={() => setMenuOpen(false)}>
+                  🔑 Iniciar sesión
+                </MobileLink>
+              </div>
+            )}
+
+            {/* Enlaces de creador */}
+            {user && (
+              <>
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{
+                    padding: '8px 0',
+                    color: '#666',
+                    fontSize: '0.7rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}>
+                    Mi cuenta
+                  </div>
+                  
+                  {/* Info del usuario */}
+                  <div style={{
+                    padding: '12px 16px',
+                    background: '#f3f4f6',
+                    marginBottom: '8px',
+                    borderRadius: '8px'
+                  }}>
+                    <div style={{ fontWeight: 'bold' }}>{creatorName || 'Usuario'}</div>
+                    {creatorId && <div style={{ fontSize: '0.7rem', color: '#666' }}>ID: {creatorId}</div>}
+                  </div>
+
+                  {/* Enlaces del perfil */}
+                  <MobileLink href="/profile" onClick={() => setMenuOpen(false)}>
+                    👤 Mi Perfil
                   </MobileLink>
-                )}
-                
+                  <MobileLink href="/profile/edit" onClick={() => setMenuOpen(false)}>
+                    ✏️ Editar Perfil
+                  </MobileLink>
+                  <MobileLink href="/messages" onClick={() => setMenuOpen(false)}>
+                    📬 Mensajes {unreadCount > 0 && `(${unreadCount})`}
+                  </MobileLink>
+                  
+                  {/* Enlaces de obras */}
+                  {hasCreatorId && (
+                    <MobileLink href="/works/new" onClick={() => setMenuOpen(false)}>
+                      ➕ Registrar obra
+                    </MobileLink>
+                  )}
+                  
+                  {/* Perfil público */}
+                  {creatorId && (
+                    <MobileLink href={`/${creatorId}`} onClick={() => setMenuOpen(false)}>
+                      🌐 Perfil público
+                    </MobileLink>
+                  )}
+                  
+                  {/* Botón cerrar sesión */}
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      border: 'none',
+                      fontSize: '1rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      borderRadius: '8px',
+                      marginTop: '8px'
+                    }}
+                  >
+                    🔒 Cerrar sesión
+                  </button>
+                </div>
+
+                {/* Indicador de perfil incompleto */}
                 {!hasCreatorId && (
-                  <MobileLink href="/register" onClick={() => setMenuOpen(false)}>
-                    ⚡ {t.nav?.completeProfile || 'Completar perfil'}
-                  </MobileLink>
+                  <div style={{
+                    padding: '12px 16px',
+                    background: '#fef3c7',
+                    borderRadius: '8px',
+                    marginBottom: '16px'
+                  }}>
+                    <div style={{ fontWeight: 'bold', color: '#92400e' }}>⚠️ Perfil incompleto</div>
+                    <div style={{ fontSize: '0.8rem', color: '#b45309' }}>Completa tu registro para publicar obras</div>
+                    <Link
+                      href="/register"
+                      onClick={() => setMenuOpen(false)}
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '8px',
+                        padding: '6px 12px',
+                        background: '#f59e0b',
+                        color: 'white',
+                        textDecoration: 'none',
+                        borderRadius: '4px',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      Completar perfil
+                    </Link>
+                  </div>
                 )}
-                
-                <div style={{ height: '1px', background: '#eaeaea', margin: '1rem 0' }} />
-                
-                <MobileLink href="/profile" onClick={() => setMenuOpen(false)}>
-                  👤 {t.nav.profile}
-                </MobileLink>
-                <MobileLink href="/messages" onClick={() => setMenuOpen(false)}>
-                  📬 {t.nav.messages} {unreadCount > 0 && `(${unreadCount})`}
-                </MobileLink>
-                {creatorId && (
-                  <MobileLink href={`/${creatorId}`} onClick={() => setMenuOpen(false)}>
-                    🌐 {t.nav.publicProfile}
-                  </MobileLink>
-                )}
-                
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    padding: '1rem',
-                    background: '#fee2e2',
-                    color: '#dc2626',
-                    border: 'none',
-                    fontSize: '1rem',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    width: '100%',
-                    textAlign: 'left',
-                    marginTop: '0.5rem'
-                  }}
-                >
-                  🔒 {t.nav.logout}
-                </button>
               </>
             )}
-            
-            {/* Language selector in mobile */}
-            <div style={{ 
-              display: 'flex', 
-              gap: '2px', 
+
+            {/* Selector de idioma */}
+            <div style={{
               borderTop: '1px solid #eaeaea',
-              paddingTop: '1rem',
-              marginTop: '1rem'
+              paddingTop: '16px',
+              marginTop: '8px'
             }}>
-              <button
-                onClick={() => {
-                  changeLanguage('es');
-                  setMenuOpen(false);
-                }}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  background: language === 'es' ? '#4f46e5' : '#eaeaea',
-                  color: language === 'es' ? 'white' : '#333',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: language === 'es' ? 'bold' : 'normal'
-                }}
-              >
-                Español
-              </button>
-              <button
-                onClick={() => {
-                  changeLanguage('en');
-                  setMenuOpen(false);
-                }}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  background: language === 'en' ? '#4f46e5' : '#eaeaea',
-                  color: language === 'en' ? 'white' : '#333',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: language === 'en' ? 'bold' : 'normal'
-                }}
-              >
-                English
-              </button>
+              <div style={{
+                padding: '8px 0',
+                color: '#666',
+                fontSize: '0.7rem',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>
+                Idioma
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => {
+                    changeLanguage('es');
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: language === 'es' ? '#4f46e5' : '#f3f4f6',
+                    color: language === 'es' ? 'white' : '#333',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: language === 'es' ? 'bold' : 'normal',
+                    borderRadius: '8px'
+                  }}
+                >
+                  🇪🇸 Español
+                </button>
+                <button
+                  onClick={() => {
+                    changeLanguage('en');
+                    setMenuOpen(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: language === 'en' ? '#4f46e5' : '#f3f4f6',
+                    color: language === 'en' ? 'white' : '#333',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontWeight: language === 'en' ? 'bold' : 'normal',
+                    borderRadius: '8px'
+                  }}
+                >
+                  🇬🇧 English
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -608,14 +709,15 @@ function MobileLink({ href, onClick, children }: any) {
       href={href}
       onClick={onClick}
       style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
         color: '#1f2937',
         textDecoration: 'none',
         padding: '12px 16px',
         transition: 'background 0.2s',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontSize: '1rem',
+        borderRadius: '8px',
+        fontSize: '1rem'
       }}
       onMouseOver={(e) => e.currentTarget.style.background = '#f9fafb'}
       onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
