@@ -8,7 +8,6 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import WorkCard from '@/components/WorkCard'
 import { useLanguage } from '@/contexts/LanguageContext'
-import WorkCardUnified from '@/components/WorkCardUnified'  // 👈 NUEVO
 import Pagination from '@/components/Pagination'  
 
 export default function ProfilePage() {
@@ -1126,13 +1125,12 @@ export default function ProfilePage() {
             marginBottom: '20px'
           }}>
             {paginatedWorks.map((work) => (
-              <WorkCardUnified
-                key={work.id}
-                work={work}
-                showActions={true}
-                onDelete={(workId) => handleDeleteWork(workId, work.file_url)}
-                isMobile={isMobile}
-              />
+              <WorkCard
+  key={work.id}
+  work={work}
+  showActions={true}
+  onDelete={(workId) => handleDeleteWork(workId, work.file_url)}
+/>
             ))}
           </div>
 

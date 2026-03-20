@@ -10,6 +10,7 @@ interface WorkCardProps {
   showActions?: boolean
   onDelete?: (workId: string) => void
   t?: any
+  isMobile?: boolean 
 }
 
 const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t }: WorkCardProps) {
@@ -208,7 +209,7 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
         {/* ✅ BOTONES DE ACCIÓN (si showActions es true) */}
         {showActions && (
           <div style={{
-            marginTop: '16px',
+            marginTop: 'auto',
             display: 'flex',
             gap: '8px',
             borderTop: '1px solid #eaeaea',
@@ -239,7 +240,8 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
                 onDelete?.(work.id)
               }}
               style={{
-                padding: '8px 16px',
+                flex: 1,  
+                padding: '8px',
                 background: '#dc2626',
                 color: 'white',
                 border: 'none',

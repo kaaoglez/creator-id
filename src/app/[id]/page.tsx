@@ -1,116 +1,61 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from "@/lib/supabase";
-import Link from "next/link";
-import ContactModal from '@/components/ContactModal'
+import { createClient } from '@/lib/supabase/client'
+import Link from 'next/link'
 import { useLanguage } from '@/contexts/LanguageContext'
-import WorkCardUnified from '@/components/WorkCardUnified'
-import Pagination from '@/components/Pagination'
+import Image from 'next/image'
 
-export default function CreatorPage({ params }: { params: Promise<{ id: string }> }) {
-  const [id, setId] = useState<string | null>(null)
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
-  const itemsPerPage = 6 // 6 obras por página (2 filas de 3)
+export default function WorkDetailPage() {
+  const params = useParams()
+  const workId = params?.id as string
+  const router = useRouter()
+  const supabase = createClient()
   const { t } = useLanguage()
+  const [imageError, setImageError] = useState(false)
 
-  useEffect(() => {
-    params.then(({ id }) => {
-      setId(id)
-    })
-  }, [params])
-
-  // Detectar tamaño de pantalla para responsive
-  useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  const isMobile = windowWidth < 768
-
-  // Query para obtener datos del creador
-  const { data: creator, isLoading: loadingCreator, error: creatorError } = useQuery({
-    queryKey: ['creator', id],
+  // Query para obtener los datos de la obra
+  const { data: work, isLoading, error } = useQuery({
+    queryKey: ['work', workId],
     queryFn: async () => {
-      if (!id) return null
-      const { data, error } = await supabase
-        .from("creators")
-        .select("*")
-        .eq("creator_id", id)
-        .single()
+      if (!workId) return null
       
+      const { data, error } = await supabase
+        .from('works')
+        .select(`
+          *,
+          creators (
+            creator_id,
+            full_first_name,
+            full_last_name,
+            avatar_url,
+            email,
+            country_name,
+            region
+          )
+        `)
+        .eq('id', workId)
+        .single()
+
       if (error) throw error
       return data
     },
-    enabled: !!id,
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
+    enabled: !!workId,
   })
 
-  // Query para obtener obras del creador
-  const { data: works = [], isLoading: loadingWorks } = useQuery({
-    queryKey: ['works', id],
-    queryFn: async () => {
-      if (!id) return []
-      const { data, error } = await supabase
-        .from("works")
-        .select("*")
-        .eq("creator_id", id)
-        .order("created_at", { ascending: false })
-      
-      if (error) throw error
-      return data || []
-    },
-    enabled: !!id,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  })
-
-  // Resetear página cuando cambian las obras
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [works.length])
-
-  // Registrar visita (efecto separado, no bloqueante)
-  useEffect(() => {
-    if (creator) {
-      supabase
-        .from('profile_visits')
-        .insert([{ 
-          creator_id: creator.creator_id,
-          visitor_ip: 'anon'
-        }])
-        .then()
-    }
-  }, [creator])
-
-  // Paginación
-  const totalPages = Math.ceil(works.length / itemsPerPage)
-  const paginatedWorks = works.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  if (loadingCreator || loadingWorks) {
+  if (isLoading) {
     return (
-      <div style={{ maxWidth: "600px", margin: "40px auto", textAlign: "center" }}>
+      <div style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
         <div style={{
-          border: "3px solid #f3f3f3",
-          borderTop: "3px solid #4f46e5",
-          borderRadius: "50%",
-          width: "50px",
-          height: "50px",
-          animation: "spin 1s linear infinite",
-          margin: "20px auto"
+          border: '3px solid #f3f3f3',
+          borderTop: '3px solid #4f46e5',
+          borderRadius: '50%',
+          width: '50px',
+          height: '50px',
+          animation: 'spin 1s linear infinite',
+          margin: '20px auto'
         }} />
         <style>{`
           @keyframes spin {
@@ -118,165 +63,217 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
             100% { transform: rotate(360deg); }
           }
         `}</style>
-        <p>{t.search?.searching || "Cargando..."}</p>
+        <p>Cargando obra...</p>
       </div>
     )
   }
 
-  if (creatorError || !creator) {
+  if (error || !work) {
     return (
-      <div style={{ maxWidth: "600px", margin: "40px auto", textAlign: "center" }}>
-        <h1 style={{ fontSize: "2rem", color: "#333", marginBottom: "20px" }}>🔍 {t.search?.noResults || "Creador no encontrado"}</h1>
-        <p style={{ marginBottom: "20px", color: "#666" }}>
-          {t.search?.noResults || "No existe un creador con el ID"}: <strong>{id}</strong>
+      <div style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
+        <h1 style={{ fontSize: '2rem', color: '#dc2626', marginBottom: '20px' }}>
+          😕 Obra no encontrada
+        </h1>
+        <p style={{ color: '#666', marginBottom: '30px' }}>
+          La obra que buscas no existe o el ID es incorrecto.
         </p>
-        <Link 
-          href="/" 
+        <Link
+          href="/"
           style={{
-            padding: "10px 20px",
-            background: "#4f46e5",
-            color: "white",
-            textDecoration: "none",
-            fontWeight: "bold",
-            borderRadius: "4px"
+            padding: '12px 24px',
+            background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+            color: 'white',
+            textDecoration: 'none',
+            fontWeight: 'bold',
+            borderRadius: '4px'
           }}
         >
-          {t.nav?.home || "Volver al inicio"}
+          ← Volver al inicio
         </Link>
       </div>
     )
   }
 
-  // Nombre completo para mostrar
-  const fullName = creator.full_first_name && creator.full_last_name
-    ? `${creator.full_first_name} ${creator.full_last_name}`
-    : `${creator.full_first_name || ''} ${creator.full_last_name || ''}`.trim();
+  const creatorName = work.creators?.full_first_name && work.creators?.full_last_name
+    ? `${work.creators.full_first_name} ${work.creators.full_last_name}`
+    : work.creators?.full_first_name || 'Creador'
 
   return (
-    <div style={{ 
-      maxWidth: "1200px", 
-      margin: "40px auto", 
-      padding: isMobile ? "0 15px" : "0 20px",
-      fontFamily: "sans-serif" 
-    }}>
-      
-      <h1 style={{ 
-        fontSize: isMobile ? "2rem" : "2.5rem", 
-        marginBottom: "20px",
-        background: "linear-gradient(135deg, #4f46e5, #10b981)",
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent"
-      }}>
-        {fullName}
-      </h1>
+    <div style={{ maxWidth: '800px', margin: '40px auto', padding: '0 20px' }}>
+      {/* Botón volver */}
+      <button
+        onClick={() => router.back()}
+        style={{
+          marginBottom: '20px',
+          padding: '8px 16px',
+          background: 'none',
+          border: '1px solid #e0e0e0',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}
+      >
+        ← Volver
+      </button>
 
-      {/* Información del creador */}
+      {/* Tarjeta de la obra */}
       <div style={{
-        border: "1px solid #eaeaea",
-        padding: isMobile ? "20px" : "25px",
-        marginBottom: "30px",
-        background: "white",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        justifyContent: 'space-between',
-        alignItems: isMobile ? 'stretch' : 'center',
-        gap: '20px',
-        borderRadius: '8px'
+        background: 'white',
+        border: '1px solid #eaeaea',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
       }}>
-        <div>
-          <p style={{ marginBottom: '8px' }}><strong>🆔 Creator ID:</strong> {creator.creator_id}</p>
-          <p style={{ marginBottom: '8px' }}><strong>🌍 {t.work?.country || "País"}:</strong> {creator.country_name} ({creator.country_code})</p>
-          <p style={{ marginBottom: '8px' }}><strong>📅 {t.profile?.stats?.firstWork || "Miembro desde"}:</strong> {new Date(creator.created_at).toLocaleDateString()}</p>
-        </div>
-        
-        <button
-          onClick={() => setIsContactModalOpen(true)}
-          style={{
-            padding: isMobile ? '12px 20px' : '12px 24px',
+        {/* Imagen */}
+        {work.file_url && !imageError ? (
+          <div style={{ position: 'relative', height: '400px' }}>
+            <img
+              src={work.file_url}
+              alt={work.title}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                background: '#f5f5f5'
+              }}
+              onError={() => setImageError(true)}
+            />
+          </div>
+        ) : (
+          <div style={{
+            height: '200px',
             background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-            color: 'white',
-            border: 'none',
-            fontSize: isMobile ? '0.95rem' : '1rem',
-            fontWeight: 'bold',
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            borderRadius: '4px',
-            width: isMobile ? '100%' : 'auto'
-          }}
-        >
-          <span>📧</span>
-          {t.profile?.actions?.contact || "Contactar creador"}
-        </button>
-      </div>
-
-      {/* Lista de obras */}
-      <h2 style={{ marginBottom: "20px", fontSize: isMobile ? "1.5rem" : "1.8rem" }}>
-        📚 {t.work?.creator || "Obras de"} {fullName}
-      </h2>
-
-      {works.length === 0 ? (
-        <div style={{
-          textAlign: "center",
-          padding: "60px 20px",
-          background: "#f9f9f9",
-          color: "#666",
-          borderRadius: '8px'
-        }}>
-          <p style={{ fontSize: isMobile ? "1.1rem" : "1.2rem" }}>
-            {t.profile?.noWorks || "Este creador aún no ha registrado obras."}
-          </p>
-        </div>
-      ) : (
-        <>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-            gap: '20px',
-            marginBottom: '20px'
+            color: 'white',
+            fontSize: '4rem'
           }}>
-            {paginatedWorks.map((work) => (
-              <WorkCardUnified
-                key={work.id}
-                work={work}
-                showActions={false}
-                isMobile={isMobile}
-              />
-            ))}
+            🎨
           </div>
+        )}
 
-          {/* Paginación */}
-          {totalPages > 1 && (
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              isMobile={isMobile}
-            />
+        {/* Información */}
+        <div style={{ padding: '24px' }}>
+          <h1 style={{ fontSize: '2rem', marginBottom: '16px', color: '#333' }}>
+            {work.title}
+          </h1>
+
+          {work.description && (
+            <div style={{
+              marginBottom: '20px',
+              padding: '16px',
+              background: '#f8fafc',
+              borderRadius: '8px',
+              borderLeft: '4px solid #4f46e5'
+            }}>
+              <p style={{ margin: 0, color: '#334155', lineHeight: '1.6' }}>
+                {work.description}
+              </p>
+            </div>
           )}
 
-          {/* Info de obras */}
-          <p style={{
-            textAlign: 'center',
-            color: '#666',
-            fontSize: '0.9rem',
+          {work.price && (
+            <p style={{ marginBottom: '16px' }}>
+              <strong>Precio:</strong>{' '}
+              <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4f46e5' }}>
+                ${work.price}
+              </span>
+            </p>
+          )}
+
+          <div style={{
+            marginBottom: '20px',
+            padding: '12px',
+            background: '#f0f7ff',
+            borderRadius: '4px'
+          }}>
+            <p style={{ marginBottom: '4px' }}>
+              <strong>🆔 Hash de verificación:</strong>
+            </p>
+            <code style={{
+              background: '#333',
+              color: '#0f0',
+              padding: '8px',
+              display: 'block',
+              borderRadius: '4px',
+              wordBreak: 'break-all'
+            }}>
+              {work.file_hash}
+            </code>
+          </div>
+
+          {/* Info del creador */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '16px',
+            padding: '16px',
+            background: '#f9f9f9',
+            borderRadius: '8px',
             marginTop: '20px'
           }}>
-            Mostrando {paginatedWorks.length} de {works.length} obras
-          </p>
-        </>
-      )}
+            {work.creators?.avatar_url ? (
+              <img
+                src={work.creators.avatar_url}
+                alt={creatorName}
+                style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+              />
+            ) : (
+              <div style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '1.5rem'
+              }}>
+                {creatorName.charAt(0)}
+              </div>
+            )}
+            <div>
+              <p style={{ margin: 0, fontWeight: 'bold' }}>{creatorName}</p>
+              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>
+                {work.creators?.country_name}
+              </p>
+            </div>
+            <Link
+              href={`/${work.creators?.creator_id}`}
+              style={{
+                marginLeft: 'auto',
+                padding: '8px 16px',
+                background: '#4f46e5',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: '4px',
+                fontSize: '0.9rem'
+              }}
+            >
+              Ver perfil
+            </Link>
+          </div>
 
-      <ContactModal
-        creatorId={creator.creator_id}
-        creatorName={fullName}
-        creatorEmail={creator.email}
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-      />
+          <div style={{
+            marginTop: '20px',
+            paddingTop: '20px',
+            borderTop: '1px solid #eaeaea',
+            color: '#666',
+            fontSize: '0.85rem',
+            textAlign: 'center'
+          }}>
+            Registrada el {new Date(work.created_at).toLocaleDateString()}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
