@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useRouter } from 'next/navigation'
@@ -8,17 +8,26 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import WorkCard from '@/components/WorkCard'
 import { useLanguage } from '@/contexts/LanguageContext'
-import Image from 'next/image'
 
 export default function ProfilePage() {
   const { user, loading, signOut } = useAuth()
   const [deleting, setDeleting] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
   const router = useRouter()
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { t, language } = useLanguage()
+
+  // Detectar tamaño de pantalla para responsive
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isMobile = windowWidth < 768
 
   // Textos de ventas con fallback
   const salesText = t.profile?.sales || {
@@ -286,63 +295,97 @@ export default function ProfilePage() {
     },
   })
 
-    // Mutación para eliminar cuenta - VERSIÓN SEGURA (SOLO EL USUARIO ACTUAL)
-const deleteAccountMutation = useMutation({
-  mutationFn: async () => {
-    console.log('🚨 ===== INICIANDO ELIMINACIÓN DE CUENTA =====')
-    console.log('👤 Usuario actual:', user?.email)
-    
-    if (!user?.email) {
-      throw new Error('No hay usuario autenticado')
-    }
+  // Mutación para eliminar cuenta
+  const deleteAccountMutation = useMutation({
+    mutationFn: async () => {
+      console.log('🚨 ===== INICIANDO ELIMINACIÓN DE CUENTA =====')
+      console.log('👤 Usuario:', user)
+      console.log('👤 creatorData:', creatorData)
+      console.log('📦 works a eliminar:', works)
+      
+      if (!creatorData) {
+        console.error('❌ No hay creatorData')
+        throw new Error('No se encontraron datos del creador')
+      }
 
-    try {
-      // PRIMERO: Eliminar manualmente las obras de storage
-      // (esto hay que hacerlo porque storage no tiene CASCADE)
-      console.log('📦 Eliminando archivos de obras...')
-      for (const work of works) {
-        if (work.file_url) {
-          const filePath = work.file_url.split('/').pop()
-          if (filePath) {
-            await supabase.storage
-              .from('works')
-              .remove([filePath])
+      if (!user) {
+        console.error('❌ No hay usuario autenticado')
+        throw new Error('No hay usuario autenticado')
+      }
+
+      try {
+        // 1. Eliminar visitas al perfil
+        console.log('1️⃣ Eliminando profile_visits...')
+        await supabase
+          .from('profile_visits')
+          .delete()
+          .eq('creator_id', creatorData.creator_id)
+
+        // 2. Eliminar obras y sus archivos
+        console.log('2️⃣ Procesando obras...')
+        for (const work of works) {
+          console.log(`   Procesando obra: ${work.id} - ${work.title}`)
+          
+          // Eliminar archivo de storage si existe
+          if (work.file_url) {
+            const filePath = work.file_url.split('/').pop()
+            if (filePath) {
+              console.log(`   Eliminando archivo: ${filePath}`)
+              await supabase.storage
+                .from('works')
+                .remove([filePath])
+            }
           }
+          
+          // Eliminar visitas de la obra
+          console.log(`   Eliminando work_visits para obra: ${work.id}`)
+          await supabase
+            .from('work_visits')
+            .delete()
+            .eq('work_id', work.id)
         }
+
+        // 3. Eliminar mensajes de contacto
+        console.log('3️⃣ Eliminando contact_messages...')
+        await supabase
+          .from('contact_messages')
+          .delete()
+          .eq('creator_id', creatorData.creator_id)
+
+        // 4. Eliminar todas las obras
+        console.log('4️⃣ Eliminando works...')
+        await supabase
+          .from('works')
+          .delete()
+          .eq('creator_id', creatorData.creator_id)
+
+        // 5. Eliminar el registro del creador
+        console.log('5️⃣ Eliminando creators...')
+        await supabase
+          .from('creators')
+          .delete()
+          .eq('creator_id', creatorData.creator_id)
+
+        // 6. Cerrar sesión
+        console.log('6️⃣ Cerrando sesión...')
+        await signOut()
+        
+        console.log('✅ ===== ELIMINACIÓN COMPLETADA =====')
+        
+      } catch (error) {
+        console.error('❌ Error durante la eliminación:', error)
+        throw error
       }
-
-      // SEGUNDO: Llamar a la función SQL que elimina SOLO al usuario actual
-      console.log('🗑️ Eliminando usuario de auth.users...')
-      const { data, error } = await supabase
-        .rpc('delete_my_account')
-
-      if (error) {
-        console.error('Error al eliminar:', error)
-        throw new Error(`Error al eliminar: ${error.message}`)
-      }
-
-      console.log('✅ Usuario eliminado correctamente')
-      
-      // Cerrar sesión localmente
-      await signOut()
-      
-      console.log('✅ ===== ELIMINACIÓN COMPLETADA =====')
-      return true
-      
-    } catch (error) {
-      console.error('❌ Error:', error)
-      throw error
-    }
-  },
-  onSuccess: () => {
-    console.log('🎉 Cuenta eliminada exitosamente')
-    router.push('/')
-  },
-  onError: (error: any) => {
-    console.error('❌ Error:', error)
-    alert('Error al eliminar la cuenta. Por favor contacta a soporte.')
-  },
-})
+    },
+    onSuccess: () => {
+      console.log('🎉 Cuenta eliminada exitosamente')
+      router.push('/')
+    },
+    onError: (error: any) => {
+      console.error('❌ Error en mutación:', error)
+      alert('Error al eliminar la cuenta. Por favor contacta a soporte.')
+    },
+  })
 
   const handleDeleteWork = useCallback(async (workId: string, fileUrl: string | null) => {
     if (!confirm(t.messages?.confirmDelete || '¿Estás seguro de que quieres eliminar esta obra?')) return
@@ -358,7 +401,7 @@ const deleteAccountMutation = useMutation({
     }
   }, [deleteWorkMutation, t])
 
-    const handleDeleteAccount = useCallback(async () => {
+  const handleDeleteAccount = useCallback(async () => {
     console.log('🖱️ Click en eliminar cuenta confirmado')
     setDeletingAccount(true)
     try {
@@ -383,7 +426,7 @@ const deleteAccountMutation = useMutation({
   // Estados de carga y error
   if (loading) {
     return (
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: "0 20px", textAlign: 'center' }}>
+      <div style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
         <p>{t.search?.searching || 'Cargando...'}</p>
       </div>
     )
@@ -484,48 +527,59 @@ const deleteAccountMutation = useMutation({
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px' }}>
+    <div style={{ 
+      maxWidth: "1200px", 
+      margin: "40px auto", 
+      padding: isMobile ? "0 15px" : "0 20px",
+      fontFamily: "sans-serif" 
+    }}>
       
-      {/* HEADER CON FOTO Y TÍTULO - CON BOTONES DE ACCIÓN */}
+      {/* HEADER RESPONSIVE */}
       <div style={{
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: '15px',
         marginBottom: '30px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '15px',
+          flexWrap: 'wrap'
+        }}>
           {/* Foto al lado del título */}
           {creatorData?.avatar_url ? (
-  <Image
-    src={creatorData.avatar_url}
-    alt={fullName}
-    width={60}
-    height={60}
-    style={{
-      borderRadius: '50%',
-      objectFit: 'cover',
-      border: '2px solid #4f46e5'
-    }}
-    priority // La foto del perfil es importante
-  />
-) : (
-  <div style={{
-    width: '60px',
-    height: '60px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '24px',
-    color: 'white',
-    fontWeight: 'bold'
-  }}>
-    {creatorData?.full_first_name?.charAt(0) || '👤'}
-  </div>
-)}
+            <img
+              src={creatorData.avatar_url}
+              alt={fullName}
+              style={{
+                width: isMobile ? '50px' : '60px',
+                height: isMobile ? '50px' : '60px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                border: '2px solid #4f46e5'
+              }}
+            />
+          ) : (
+            <div style={{
+              width: isMobile ? '50px' : '60px',
+              height: isMobile ? '50px' : '60px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: isMobile ? '20px' : '24px',
+              color: 'white',
+              fontWeight: 'bold'
+            }}>
+              {creatorData?.full_first_name?.charAt(0) || '👤'}
+            </div>
+          )}
           <h1 style={{ 
-            fontSize: '2rem', 
+            fontSize: isMobile ? '1.5rem' : '2rem', 
             margin: 0,
             background: 'linear-gradient(135deg, #4f46e5, #10b981)',
             WebkitBackgroundClip: 'text',
@@ -535,17 +589,24 @@ const deleteAccountMutation = useMutation({
           </h1>
         </div>
         
-        {/* BOTONES DE ACCIÓN */}
-        <div style={{ display: 'flex', gap: '10px' }}>
+        {/* BOTONES DE ACCIÓN RESPONSIVE */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '10px',
+          flexDirection: isMobile ? 'column' : 'row',
+          width: isMobile ? '100%' : 'auto'
+        }}>
           <Link
             href="/profile/edit"
             style={{
-              padding: '8px 16px',
+              padding: isMobile ? '10px' : '8px 16px',
               background: '#4f46e5',
               color: 'white',
               textDecoration: 'none',
               fontWeight: 'bold',
-              borderRadius: '4px'
+              borderRadius: '4px',
+              textAlign: 'center',
+              flex: isMobile ? 1 : 'none'
             }}
           >
             ✏️ {t.profile?.editButton || 'Editar perfil'}
@@ -553,13 +614,15 @@ const deleteAccountMutation = useMutation({
           <button
             onClick={signOut}
             style={{
-              padding: '8px 16px',
+              padding: isMobile ? '10px' : '8px 16px',
               background: '#ff4444',
               color: 'white',
               border: 'none',
               cursor: 'pointer',
               fontWeight: 'bold',
-              borderRadius: '4px'
+              borderRadius: '4px',
+              textAlign: 'center',
+              flex: isMobile ? 1 : 'none'
             }}
           >
             {t.auth?.logout || 'Cerrar sesión'}
@@ -567,10 +630,10 @@ const deleteAccountMutation = useMutation({
         </div>
       </div>
 
-                   {/* Información del creador */}
+      {/* Información del creador - RESPONSIVE */}
       <div style={{
         border: '1px solid #eaeaea',
-        padding: '25px',
+        padding: isMobile ? '15px' : '25px',
         marginBottom: '30px',
         background: 'white',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
@@ -580,39 +643,28 @@ const deleteAccountMutation = useMutation({
           {t.profile?.personalInfo || 'Información personal'}
         </h2>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px' }}>
-          {/* Fila 1: Nombre completo (ocupa 2 columnas) */}
-          <div style={{ gridColumn: '1 / -1' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', 
+          gap: '15px' 
+        }}>
+          <div>
             <strong>{t.profile?.personalInfo || 'Nombre completo'}:</strong> {fullName}
           </div>
-          
-          {/* Fila 2: Email y País */}
           <div>
             <strong>Email:</strong> {creatorData.email}
           </div>
-          
+          {creatorData.phone && (
+            <div>
+              <strong>Teléfono:</strong> {creatorData.phone}
+            </div>
+          )}
           <div>
             <strong>{t.work?.country || 'País'}:</strong> {creatorData.country_name} ({creatorData.country_code})
           </div>
-          
-          {/* Fila 3: Teléfono (si existe) y Región */}
-          {creatorData.phone ? (
-            <>
-              <div>
-                <strong>Teléfono:</strong> {creatorData.phone}
-              </div>
-              <div>
-                <strong>Región:</strong> {creatorData.region}
-              </div>
-            </>
-          ) : (
-            <>
-              <div></div> {/* Celda vacía para teléfono */}
-              <div>
-                <strong>Región:</strong> {creatorData.region}
-              </div>
-            </>
-          )}
+          <div>
+            <strong>Región:</strong> {creatorData.region}
+          </div>
         </div>
 
         <div style={{
@@ -627,20 +679,21 @@ const deleteAccountMutation = useMutation({
           <code style={{
             background: '#333',
             color: '#0f0',
-            padding: '10px',
-            fontSize: '1.2rem',
+            padding: '8px 12px',
+            fontSize: isMobile ? '1rem' : '1.2rem',
             display: 'inline-block',
-            borderRadius: '4px'
+            borderRadius: '4px',
+            wordBreak: 'break-all'
           }}>
             {creatorData.creator_id}
           </code>
         </div>
       </div>
 
-      {/* Dashboard de Estadísticas Generales */}
+      {/* Dashboard de Estadísticas Generales - RESPONSIVE */}
       <div style={{
         background: 'white',
-        padding: '20px',
+        padding: isMobile ? '15px' : '20px',
         marginBottom: '30px',
         border: '1px solid #eaeaea',
         borderRadius: '4px'
@@ -649,7 +702,7 @@ const deleteAccountMutation = useMutation({
         
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
           gap: '15px',
           marginBottom: '25px'
         }}>
@@ -659,7 +712,7 @@ const deleteAccountMutation = useMutation({
             textAlign: 'center',
             borderRadius: '4px'
           }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
+            <div style={{ fontSize: isMobile ? '1.8rem' : '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
               {stats?.profileVisits || 0}
             </div>
             <div style={{ fontSize: '0.9rem', color: '#666' }}>{t.profile?.stats?.profileVisits || 'Visitas al perfil'}</div>
@@ -671,7 +724,7 @@ const deleteAccountMutation = useMutation({
             textAlign: 'center',
             borderRadius: '4px'
           }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
+            <div style={{ fontSize: isMobile ? '1.8rem' : '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
               {stats?.totalMessages || 0}
             </div>
             <div style={{ fontSize: '0.9rem', color: '#666' }}>{t.profile?.stats?.totalMessages || 'Mensajes totales'}</div>
@@ -684,7 +737,7 @@ const deleteAccountMutation = useMutation({
             borderRadius: '4px'
           }}>
             <div style={{ 
-              fontSize: '2rem', 
+              fontSize: isMobile ? '1.8rem' : '2rem', 
               fontWeight: 'bold', 
               color: (stats?.unreadMessages || 0) > 0 ? '#dc2626' : '#4f46e5' 
             }}>
@@ -705,8 +758,10 @@ const deleteAccountMutation = useMutation({
             .map(work => (
               <div key={work.id} style={{
                 display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
                 justifyContent: 'space-between',
-                alignItems: 'center',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                gap: isMobile ? '8px' : '0',
                 padding: '10px',
                 background: '#f9f9f9',
                 borderRadius: '4px'
@@ -717,7 +772,8 @@ const deleteAccountMutation = useMutation({
                   color: 'white',
                   padding: '2px 8px',
                   fontSize: '0.8rem',
-                  borderRadius: '4px'
+                  borderRadius: '4px',
+                  alignSelf: isMobile ? 'flex-start' : 'auto'
                 }}>
                   {work.visits} {work.visits === 1 ? (t.work?.visits?.singular || 'visita') : (t.work?.visits?.plural || 'visitas')}
                 </span>
@@ -726,23 +782,23 @@ const deleteAccountMutation = useMutation({
         </div>
       </div>
 
-     {/* 📊 ESTADÍSTICAS DE VENTAS */}
+     {/* 📊 ESTADÍSTICAS DE VENTAS - CON TODOS LOS ESTADOS */}
       {loadingSales ? (
         <div style={{ textAlign: 'center', padding: '20px' }}>{t.search?.searching || 'Cargando...'}</div>
       ) : salesStats && salesStats.totalSales > 0 ? (
         <div style={{
           background: 'white',
-          padding: '20px',
+          padding: isMobile ? '15px' : '20px',
           marginBottom: '30px',
           border: '1px solid #eaeaea',
           borderRadius: '4px'
         }}>
           <h3 style={{ marginTop: 0, marginBottom: '20px' }}>{salesText.title}</h3>
           
-          {/* Tarjetas de resumen */}
+          {/* Tarjetas de resumen - RESPONSIVE */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
             gap: '15px',
             marginBottom: '25px'
           }}>
@@ -752,7 +808,7 @@ const deleteAccountMutation = useMutation({
               textAlign: 'center',
               borderRadius: '4px'
             }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
+              <div style={{ fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
                 {salesStats.totalSales}
               </div>
               <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.totalSales}</div>
@@ -764,7 +820,7 @@ const deleteAccountMutation = useMutation({
               textAlign: 'center',
               borderRadius: '4px'
             }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
+              <div style={{ fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 'bold', color: '#4f46e5' }}>
                 {salesStats.completedSales}
               </div>
               <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.completedSales || 'Completadas'}</div>
@@ -777,7 +833,7 @@ const deleteAccountMutation = useMutation({
               borderRadius: '4px'
             }}>
               <div style={{ 
-                fontSize: '2rem', 
+                fontSize: isMobile ? '1.5rem' : '2rem', 
                 fontWeight: 'bold', 
                 color: salesStats.pendingSales > 0 ? '#856404' : '#4f46e5' 
               }}>
@@ -793,7 +849,7 @@ const deleteAccountMutation = useMutation({
               borderRadius: '4px'
             }}>
               <div style={{ 
-                fontSize: '2rem', 
+                fontSize: isMobile ? '1.5rem' : '2rem', 
                 fontWeight: 'bold', 
                 color: salesStats.failedSales > 0 ? '#721c24' : '#4f46e5' 
               }}>
@@ -803,10 +859,10 @@ const deleteAccountMutation = useMutation({
             </div>
           </div>
 
-          {/* Ingresos */}
+          {/* Ingresos (solo completadas) - RESPONSIVE */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
             gap: '15px',
             marginBottom: '25px'
           }}>
@@ -816,7 +872,7 @@ const deleteAccountMutation = useMutation({
               textAlign: 'center',
               borderRadius: '4px'
             }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#4f46e5' }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#4f46e5' }}>
                 ${salesStats.totalRevenue.toFixed(2)}
               </div>
               <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.grossRevenue}</div>
@@ -828,7 +884,7 @@ const deleteAccountMutation = useMutation({
               textAlign: 'center',
               borderRadius: '4px'
             }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#dc2626' }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#dc2626' }}>
                 ${salesStats.platformFees.toFixed(2)}
               </div>
               <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.platformFee}</div>
@@ -840,14 +896,14 @@ const deleteAccountMutation = useMutation({
               textAlign: 'center',
               borderRadius: '4px'
             }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2e7d32' }}>
+              <div style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#2e7d32' }}>
                 ${salesStats.creatorEarnings.toFixed(2)}
               </div>
               <div style={{ fontSize: '0.9rem', color: '#666' }}>{salesText.earnings}</div>
             </div>
           </div>
 
-          {/* Ventas por obra */}
+          {/* Ventas por obra - RESPONSIVE */}
           {salesStats.salesByWork && salesStats.salesByWork.length > 0 && (
             <>
               <h4 style={{ marginBottom: '15px' }}>{salesText.byWork}</h4>
@@ -857,14 +913,21 @@ const deleteAccountMutation = useMutation({
                   .map((work: any) => (
                     <div key={work.work_id} style={{
                       display: 'flex',
+                      flexDirection: isMobile ? 'column' : 'row',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
+                      alignItems: isMobile ? 'flex-start' : 'center',
+                      gap: isMobile ? '10px' : '0',
                       padding: '10px',
                       background: '#f9f9f9',
                       borderRadius: '4px'
                     }}>
                       <span style={{ fontWeight: 500 }}>{work.work_title}</span>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                        width: isMobile ? '100%' : 'auto'
+                      }}>
                         {work.completed > 0 && (
                           <span style={{
                             background: '#10b981',
@@ -914,7 +977,7 @@ const deleteAccountMutation = useMutation({
             </>
           )}
 
-          {/* Últimas ventas */}
+          {/* Últimas ventas con estado - RESPONSIVE */}
           {salesStats.recentSales && salesStats.recentSales.length > 0 && (
             <>
               <h4 style={{ marginBottom: '15px' }}>{salesText.recent}</h4>
@@ -925,7 +988,13 @@ const deleteAccountMutation = useMutation({
                     background: '#f9f9f9',
                     borderRadius: '4px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: isMobile ? 'column' : 'row',
+                      justifyContent: 'space-between', 
+                      marginBottom: '5px',
+                      gap: isMobile ? '5px' : '0'
+                    }}>
                       <span style={{ fontWeight: 'bold' }}>{sale.work_title}</span>
                       <span style={{ 
                         color: sale.status === 'completed' ? '#2e7d32' : 
@@ -936,7 +1005,14 @@ const deleteAccountMutation = useMutation({
                          sale.status === 'pending' ? '⏳ Pendiente' : '❌ Fallida'}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: '#666' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: isMobile ? 'column' : 'row',
+                      justifyContent: 'space-between', 
+                      fontSize: '0.8rem', 
+                      color: '#666',
+                      gap: isMobile ? '5px' : '0'
+                    }}>
                       <span>{salesText.buyer}: {sale.buyer_email}</span>
                       <span>{salesText.amount}: ${sale.amount?.toFixed(2)}</span>
                     </div>
@@ -963,10 +1039,11 @@ const deleteAccountMutation = useMutation({
         </div>
       )}
 
-      {/* Acciones rápidas */}
+      {/* Acciones rápidas - RESPONSIVE */}
       <div style={{
         display: 'flex',
         gap: '15px',
+        flexDirection: isMobile ? 'column' : 'row',
         marginBottom: '30px'
       }}>
         <Link
@@ -1001,7 +1078,7 @@ const deleteAccountMutation = useMutation({
         </Link>
       </div>
 
-      {/* Lista de obras */}
+      {/* Lista de obras - RESPONSIVE */}
       <h2 style={{ marginBottom: '20px' }}>📚 {t.profile?.myWorks || 'Mis obras registradas'}</h2>
 
       {works.length === 0 ? (
@@ -1032,7 +1109,7 @@ const deleteAccountMutation = useMutation({
       ) : (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
           gap: '24px',
           marginBottom: '40px'
         }}>
@@ -1047,10 +1124,10 @@ const deleteAccountMutation = useMutation({
         </div>
       )}
 
-            {/* Sección de peligro - VERSIÓN CORREGIDA CON TRADUCCIONES */}
+      {/* Sección de peligro - RESPONSIVE */}
       <div style={{
         marginTop: '40px',
-        padding: '20px',
+        padding: isMobile ? '15px' : '20px',
         background: '#fff5f5',
         border: '1px solid #ffcdd2',
         borderRadius: '4px'
@@ -1074,7 +1151,8 @@ const deleteAccountMutation = useMutation({
               fontSize: '1rem',
               fontWeight: 'bold',
               cursor: 'pointer',
-              borderRadius: '4px'
+              borderRadius: '4px',
+              width: isMobile ? '100%' : 'auto'
             }}
           >
             {t.profile?.deleteButton || 'Eliminar mi cuenta permanentemente'}
@@ -1082,7 +1160,7 @@ const deleteAccountMutation = useMutation({
         ) : (
           <div style={{
             background: 'white',
-            padding: '20px',
+            padding: isMobile ? '15px' : '20px',
             border: '1px solid #ffcdd2',
             borderRadius: '4px'
           }}>
@@ -1090,26 +1168,30 @@ const deleteAccountMutation = useMutation({
               {t.profile?.confirmDelete || '¿Estás completamente seguro? Esta acción no se puede deshacer.'}
             </p>
             
-            {/* LISTA DE ELEMENTOS A ELIMINAR CON TRADUCCIONES */}
-            <div style={{ marginBottom: '20px', color: '#666' }}>
-  <p>{t.profile?.deleteItems || 'Se eliminarán:'}</p>
-  <ul style={{ marginTop: '10px', marginLeft: '20px' }}>
-    {t.profile?.deleteList?.map((item: string, index: number) => (
-      <li key={index}>{item}</li>
-    )) || (
-      <>
-        <li>Tu perfil de creador</li>
-        <li>Todas tus obras registradas</li>
-        <li>Las imágenes de tus obras</li>
-        <li>Las visitas a tu perfil y obras</li>
-        <li>Los mensajes de contacto</li>
-        <li>Tu cuenta de usuario</li>
-      </>
-    )}
-  </ul>
-</div>
+            {/* LISTA DE ELEMENTOS A ELIMINAR */}
+            <p style={{ marginBottom: '20px', color: '#666' }}>
+              {t.profile?.deleteItems || 'Se eliminarán:'}
+              <ul style={{ marginTop: '10px', marginLeft: '20px' }}>
+                {t.profile?.deleteList?.map((item: string, index: number) => (
+                  <li key={index}>{item}</li>
+                )) || (
+                  <>
+                    <li>Tu perfil de creador</li>
+                    <li>Todas tus obras registradas</li>
+                    <li>Las imágenes de tus obras</li>
+                    <li>Las visitas a tu perfil y obras</li>
+                    <li>Los mensajes de contacto</li>
+                    <li>Tu cuenta de usuario</li>
+                  </>
+                )}
+              </ul>
+            </p>
             
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ 
+              display: 'flex', 
+              gap: '10px',
+              flexDirection: isMobile ? 'column' : 'row'
+            }}>
               <button
                 onClick={handleDeleteAccount}
                 disabled={deletingAccount}
@@ -1121,7 +1203,8 @@ const deleteAccountMutation = useMutation({
                   fontSize: '1rem',
                   fontWeight: 'bold',
                   cursor: deletingAccount ? 'not-allowed' : 'pointer',
-                  borderRadius: '4px'
+                  borderRadius: '4px',
+                  flex: isMobile ? 1 : 'none'
                 }}
               >
                 {deletingAccount ? 'Eliminando...' : (t.profile?.confirmYes || 'Sí, eliminar mi cuenta')}
@@ -1139,7 +1222,8 @@ const deleteAccountMutation = useMutation({
                   border: '1px solid #ccc',
                   fontSize: '1rem',
                   cursor: 'pointer',
-                  borderRadius: '4px'
+                  borderRadius: '4px',
+                  flex: isMobile ? 1 : 'none'
                 }}
               >
                 {t.profile?.cancel || 'Cancelar'}
@@ -1148,6 +1232,24 @@ const deleteAccountMutation = useMutation({
           </div>
         )}
       </div>
+
+      {/* Estilos responsive globales */}
+      <style>{`
+        @media (max-width: 768px) {
+          .profile-container {
+            padding: 0 10px;
+          }
+          h1 {
+            font-size: 1.5rem;
+          }
+          h2 {
+            font-size: 1.3rem;
+          }
+          h3 {
+            font-size: 1.2rem;
+          }
+        }
+      `}</style>
     </div>
   )
 }

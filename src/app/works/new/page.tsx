@@ -179,14 +179,15 @@ export default function NewWorkPage() {
     return null
   }
 
-  if (success && workData) {
+   if (success && workData) {
     return (
       <div style={{ maxWidth: '600px', margin: '40px auto', padding: '0 20px' }}>
         <div style={{
           background: '#e8f5e8',
           border: '2px solid #4caf50',
           padding: '30px',
-          textAlign: 'center'
+          textAlign: 'center',
+          borderRadius: '8px'
         }}>
           <h1 style={{ color: '#2e7d32', marginBottom: '20px' }}>{t.works.success}</h1>
           
@@ -194,28 +195,72 @@ export default function NewWorkPage() {
             background: 'white',
             padding: '20px',
             marginBottom: '20px',
-            textAlign: 'left'
+            textAlign: 'left',
+            borderRadius: '4px'
           }}>
-            <p><strong>{t.works.title}:</strong> {workData.title}</p>
-            {workData.description && <p><strong>{t.work.description}:</strong> {workData.description}</p>}
-            {workData.price && (
-              <p><strong>Precio:</strong> <span style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#4f46e5' }}>${workData.price}</span></p>
+            {/* Título */}
+            <p style={{ marginBottom: '10px' }}>
+              <strong>{t.works.title}:</strong> {workData.title}
+            </p>
+            
+            {/* Descripción - CORREGIDA con límite */}
+            {workData.description && (
+              <div style={{ marginBottom: '15px' }}>
+                <strong>{t.work.description}:</strong>
+                <div style={{
+                  marginTop: '5px',
+                  padding: '12px',
+                  background: '#f8fafc',
+                  borderLeft: '4px solid #4f46e5',
+                  borderRadius: '0 4px 4px 0',
+                  maxHeight: '100px',
+                  overflowY: 'auto',
+                  wordWrap: 'break-word',
+                  fontSize: '0.95rem',
+                  lineHeight: '1.5',
+                  color: '#334155'
+                }}>
+                  {workData.description}
+                </div>
+              </div>
             )}
-            <p><strong>{t.work.hash}:</strong></p>
+            
+            {/* Precio */}
+            {workData.price && (
+              <p style={{ marginBottom: '10px' }}>
+                <strong>Precio:</strong>{' '}
+                <span style={{ fontSize: '1.3rem', fontWeight: 'bold', color: '#4f46e5' }}>
+                  ${typeof workData.price === 'number' ? workData.price.toFixed(2) : workData.price}
+                </span>
+              </p>
+            )}
+            
+            {/* Hash - CORREGIDO con wordBreak */}
+            <p style={{ marginBottom: '5px' }}>
+              <strong>{t.work.hash}:</strong>
+            </p>
             <code style={{
               background: '#333',
               color: '#0f0',
               padding: '10px',
               display: 'block',
               wordBreak: 'break-all',
-              fontFamily: 'monospace'
+              fontFamily: 'monospace',
+              borderRadius: '4px',
+              fontSize: '0.9rem'
             }}>
               {workData.file_hash}
             </code>
 
+            {/* Imagen */}
             {workData.file_url && workData.file_type?.startsWith('image/') && (
-              <div style={{ marginTop: '15px', padding: '10px', background: '#f5f5f5' }}>
-                <p><strong>{t.work.image}:</strong></p>
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '10px', 
+                background: '#f5f5f5',
+                borderRadius: '4px'
+              }}>
+                <p style={{ marginBottom: '10px' }}><strong>{t.work.image}:</strong></p>
                 <Image
                   src={workData.file_url}
                   alt={workData.title}
@@ -224,7 +269,8 @@ export default function NewWorkPage() {
                   style={{
                     maxWidth: '100%',
                     height: 'auto',
-                    objectFit: 'contain'
+                    objectFit: 'contain',
+                    borderRadius: '4px'
                   }}
                   loading="lazy"
                 />
@@ -232,7 +278,8 @@ export default function NewWorkPage() {
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+          {/* Botones de acción */}
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link
               href={`/${creator.creator_id}`}
               style={{
@@ -240,7 +287,10 @@ export default function NewWorkPage() {
                 background: '#4f46e5',
                 color: 'white',
                 textDecoration: 'none',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                borderRadius: '4px',
+                flex: '1 1 auto',
+                minWidth: '150px'
               }}
             >
               {t.work.viewCreator}
@@ -253,7 +303,10 @@ export default function NewWorkPage() {
                 color: 'white',
                 border: 'none',
                 cursor: 'pointer',
-                fontWeight: 'bold'
+                fontWeight: 'bold',
+                borderRadius: '4px',
+                flex: '1 1 auto',
+                minWidth: '150px'
               }}
             >
               {t.works.registerAnother}

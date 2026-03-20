@@ -5,7 +5,6 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { debounce } from 'lodash'
 
 // Mapa de países (mismo que en search)
 const countryMap: Record<string, string> = {
@@ -20,15 +19,25 @@ const countryMap: Record<string, string> = {
 };
 
 export default function HomePage() {
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const [searchTerm, setSearchTerm] = useState('')
   const [stats, setStats] = useState({ creators: 0, works: 0, countries: 0 })
   const [recentWorks, setRecentWorks] = useState<any[]>([])
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
   const router = useRouter()
   const supabase = createClient()
   const carouselRef = useRef<HTMLDivElement>(null)
+
+  // Detectar tamaño de pantalla para responsive
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isMobile = windowWidth < 768
 
   useEffect(() => {
     async function fetchData() {
@@ -126,20 +135,21 @@ export default function HomePage() {
     <div style={{ 
       maxWidth: "1200px", 
       margin: "40px auto", 
-      padding: "0 20px",
+      padding: isMobile ? "0 15px" : "0 20px",
       fontFamily: "sans-serif" 
     }}>
       
       {/* Hero Section con buscador integrado */}
       <div style={{
         background: "linear-gradient(135deg, #4f46e5, #10b981)",
-        padding: "60px 40px",
+        padding: isMobile ? "40px 20px" : "60px 40px",
         marginBottom: "40px",
         textAlign: "center",
-        boxShadow: "0 4px 15px rgba(0,0,0,0.1)"
+        boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+        borderRadius: "0"
       }}>
         <h1 style={{ 
-          fontSize: "clamp(2.5rem, 8vw, 4rem)", 
+          fontSize: isMobile ? "2rem" : "clamp(2.5rem, 8vw, 4rem)", 
           marginBottom: "20px",
           color: "white",
           fontWeight: "800",
@@ -149,21 +159,22 @@ export default function HomePage() {
         </h1>
         
         <p style={{
-          fontSize: "clamp(1.1rem, 4vw, 1.3rem)",
+          fontSize: isMobile ? "1rem" : "clamp(1.1rem, 4vw, 1.3rem)",
           marginBottom: "40px",
           color: "rgba(255,255,255,0.95)",
           maxWidth: "600px",
-          margin: "0 auto 40px"
+          margin: "0 auto 40px",
+          padding: isMobile ? "0 10px" : "0"
         }}>
           {t.home?.subtitle || 'Create your unique identity as a creator and share your public profile easily.'}
         </p>
 
-        {/* Buscador - mismo estilo que en search page */}
+        {/* Buscador */}
         <form onSubmit={handleSearch} style={{ maxWidth: "600px", margin: "0 auto" }}>
           <div style={{
             display: "flex",
             gap: "10px",
-            flexWrap: "wrap"
+            flexDirection: isMobile ? "column" : "row"
           }}>
             <input
               type="text"
@@ -172,24 +183,27 @@ export default function HomePage() {
               placeholder={t.home?.searchPlaceholder || 'Buscar por nombre, ID o email...'}
               style={{
                 flex: 1,
-                padding: "15px",
+                padding: isMobile ? "12px" : "15px",
                 fontSize: "1rem",
                 border: "none",
                 outline: "none",
-                minWidth: "250px",
+                borderRadius: isMobile ? "4px" : "4px 0 0 4px",
+                width: "100%"
               }}
             />
             <button
               type="submit"
               style={{
-                padding: "15px 30px",
+                padding: isMobile ? "12px" : "15px 30px",
                 background: "white",
                 color: "#4f46e5",
                 border: "none",
                 cursor: "pointer",
                 fontSize: "1rem",
                 fontWeight: "bold",
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                borderRadius: isMobile ? "4px" : "0 4px 4px 0",
+                width: isMobile ? "100%" : "auto"
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.background = "#f0f0f0";
@@ -208,23 +222,23 @@ export default function HomePage() {
           <div style={{
             display: 'flex',
             justifyContent: 'center',
-            gap: '40px',
+            gap: isMobile ? '20px' : '40px',
             flexWrap: 'wrap',
             marginTop: '40px'
           }}>
-            <StatCard number={stats.creators} label="Creadores" />
-            <StatCard number={stats.works} label="Obras" />
-            <StatCard number={stats.countries} label="Países" />
+            <StatCard number={stats.creators} label="Creadores" isMobile={isMobile} />
+            <StatCard number={stats.works} label="Obras" isMobile={isMobile} />
+            <StatCard number={stats.countries} label="Países" isMobile={isMobile} />
           </div>
         )}
       </div>
 
-      {/* Carrusel de Obras Recientes */}
+            {/* Carrusel de Obras Recientes - MÚLTIPLES OBRAS POR SLIDE */}
       {!isLoading && mappedWorks.length > 0 && (
         <section style={{ marginBottom: "60px" }}>
           <h2 style={{ 
-            fontSize: "2rem", 
-            marginBottom: "30px",
+            fontSize: isMobile ? "1.5rem" : "2rem", 
+            marginBottom: "20px",
             background: "linear-gradient(135deg, #4f46e5, #10b981)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
@@ -238,7 +252,7 @@ export default function HomePage() {
             <div ref={carouselRef} style={{
               width: '100%',
               overflow: 'hidden',
-              borderRadius: '4px',
+              borderRadius: '0',
               background: 'white',
               border: '1px solid #e0e0e0',
               boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
@@ -249,183 +263,200 @@ export default function HomePage() {
                 transform: `translateX(-${currentSlide * 100}%)`,
                 width: '100%'
               }}>
-                {mappedWorks.map((work) => (
-                  <div key={work.id} style={{
+                {/* Agrupar obras en grupos de 3 para desktop y 1 para móvil */}
+                {Array.from({ length: Math.ceil(mappedWorks.length / (isMobile ? 1 : 3)) }).map((_, groupIndex) => (
+                  <div key={groupIndex} style={{
                     flex: '0 0 100%',
                     width: '100%',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    padding: isMobile ? '15px' : '20px'
                   }}>
                     <div style={{
                       display: 'grid',
-                      gridTemplateColumns: '300px 1fr',
-                      gap: '30px',
-                      padding: '30px',
-                      background: 'white'
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                      gap: isMobile ? '15px' : '20px'
                     }}>
-                      {/* Imagen de la obra */}
-                      <div style={{
-                        height: '300px',
-                        background: '#f5f5f5',
-                        position: 'relative',
-                        border: '1px solid #e0e0e0'
-                      }}>
-                        {work.file_url ? (
-                          <img
-                            src={work.file_url}
-                            alt={work.title}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover'
-                            }}
-                          />
-                        ) : (
-                          <div style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-                            color: 'white',
-                            fontSize: '3rem'
-                          }}>
-                            🎨
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Información de la obra - ALINEADA CON LA IMAGEN */}
-                      <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '300px' /* Misma altura que la imagen */
-                      }}>
-                        {/* Título pegado arriba */}
-                        <h3 style={{
-                          fontSize: '1.8rem',
-                          margin: '0 0 15px 0', /* Sin margen superior */
-                          color: '#333',
-                          lineHeight: '1.2'
-                        }}>
-                          {work.title}
-                        </h3>
-                        
-                        {/* Descripción con altura fija para mantener proporciones */}
-                        <div style={{
-                          flex: '1',
-                          marginBottom: '15px',
-                          padding: '12px',
-                          background: '#f8fafc',
-                          borderLeft: '4px solid #4f46e5',
-                          borderRadius: '0 4px 4px 0',
-                          overflowY: 'auto',
-                          minHeight: '80px'
-                        }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginBottom: '6px',
-                            color: '#4f46e5',
-                            fontSize: '0.8rem',
-                            fontWeight: '600',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px'
-                          }}>
-                            <span>📝</span> DESCRIPCIÓN
-                          </div>
-                          <p style={{
-                            color: '#334155',
-                            lineHeight: '1.5',
-                            fontSize: '0.9rem',
-                            margin: 0,
-                            fontStyle: work.description ? 'normal' : 'italic'
-                          }}>
-                            {work.description || 'Sin descripción disponible'}
-                          </p>
-                        </div>
-
-                        {/* ID del CREADOR */}
-                        <div style={{
-                          marginBottom: '15px',
-                          padding: '10px 12px',
-                          background: '#f0f7ff',
-                          border: '1px solid #4f46e5'
-                        }}>
-                          <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#333', fontSize: '0.9rem' }}>
-                            🆔 Creator ID:
-                          </div>
-                          <code style={{
-                            background: '#333',
-                            color: '#0f0',
-                            padding: '6px 10px',
-                            fontSize: '1rem',
-                            display: 'inline-block'
-                          }}>
-                            {work.creator_id}
-                          </code>
-                        </div>
-
-                        {/* Botón al fondo */}
-                         <div style={{
-                          display: 'flex',
-                          justifyContent: 'center',
-                          marginTop: 'auto'
-                        }}>
-                        <Link
-                          href={`/${work.creator_id}`}
-                          style={{
-                              display: 'inline-block',
-                              padding: '8px 20px',
-                              background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-                              color: 'white',
-                              textDecoration: 'none',
-                              fontWeight: '600',
-                              fontSize: '0.9rem',
-                              transition: 'all 0.2s',
-                              textAlign: 'center',
-                              borderRadius: '4px'
-                            }}
+                      {mappedWorks
+                        .slice(groupIndex * (isMobile ? 1 : 3), (groupIndex + 1) * (isMobile ? 1 : 3))
+                        .map((work) => (
+                          <div key={work.id} style={{
+                            background: '#f9f9f9',
+                            borderRadius: '0',
+                            overflow: 'hidden',
+                            border: '1px solid #eaeaea',
+                            transition: 'transform 0.2s',
+                            cursor: 'pointer'
+                          }}
                           onMouseOver={(e) => {
-                            e.currentTarget.style.opacity = '0.9';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.transform = 'translateY(-4px)';
+                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
                           }}
                           onMouseOut={(e) => {
-                            e.currentTarget.style.opacity = '1';
                             e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = 'none';
                           }}
-                        >
-                          Ver perfil del creador →
-                        </Link>
-                      </div>
-                      </div>
+                          onClick={() => router.push(`/${work.creator_id}`)}>
+                            
+                            {/* Imagen de la obra */}
+                            <div style={{
+                              height: isMobile ? '150px' : '180px',
+                              background: '#f0f0f0',
+                              position: 'relative',
+                              overflow: 'hidden'
+                            }}>
+                              {work.file_url ? (
+                                <img
+                                  src={work.file_url}
+                                  alt={work.title}
+                                  style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                  }}
+                                />
+                              ) : (
+                                <div style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+                                  color: 'white',
+                                  fontSize: '2rem'
+                                }}>
+                                  🎨
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Información de la obra */}
+                            <div style={{ padding: '12px' }}>
+                              <h3 style={{
+                                fontSize: isMobile ? '1rem' : '1.1rem',
+                                margin: '0 0 8px 0',
+                                color: '#333',
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}>
+                                {work.title}
+                              </h3>
+                              
+                              {/* Descripción - AHORA COMO RESUMEN */}
+                              <p style={{
+                                fontSize: '0.85rem',
+                                color: '#666',
+                                marginBottom: '8px',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                height: '2.4em',
+                                lineHeight: '1.2'
+                              }}>
+                                {work.description 
+                                  ? (work.description.length > 80 
+                                    ? work.description.substring(0, 80) + '...' 
+                                    : work.description)
+                                  : 'Sin descripción'}
+                              </p>
+
+                              {/* Creator ID simplificado */}
+                              <div style={{
+                                background: '#f0f7ff',
+                                padding: '6px 8px',
+                                borderRadius: '0',
+                                fontSize: '0.75rem',
+                                marginBottom: '8px'
+                              }}>
+                                <code style={{
+                                  background: '#333',
+                                  color: '#0f0',
+                                  padding: '2px 4px',
+                                  fontSize: '0.7rem'
+                                }}>
+                                  {work.creator_id}
+                                </code>
+                              </div>
+
+                              {/* Creador */}
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                borderTop: '1px solid #eaeaea',
+                                paddingTop: '8px'
+                              }}>
+                                <div style={{
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '50%',
+                                  background: work.creator?.avatar_url ? 'none' : 'linear-gradient(135deg, #4f46e5, #10b981)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontSize: '0.8rem',
+                                  overflow: 'hidden'
+                                }}>
+                                  {work.creator?.avatar_url ? (
+                                    <img
+                                      src={work.creator.avatar_url}
+                                      alt={work.creator.display_name}
+                                      style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover'
+                                      }}
+                                    />
+                                  ) : (
+                                    work.creator?.display_name?.charAt(0) || '👤'
+                                  )}
+                                </div>
+                                <span style={{
+                                  fontSize: '0.8rem',
+                                  color: '#666',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}>
+                                  {work.creator?.display_name?.split(' ')[0] || 'Creador'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Botones de navegación */}
-            {mappedWorks.length > 1 && (
+            {/* Botones de navegación - solo si hay más de un grupo */}
+            {Math.ceil(mappedWorks.length / (isMobile ? 1 : 3)) > 1 && (
               <>
                 <button
                   onClick={prevSlide}
                   style={{
                     position: 'absolute',
-                    left: '10px',
+                    left: '-15px',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    width: '40px',
-                    height: '40px',
+                    width: isMobile ? '32px' : '40px',
+                    height: isMobile ? '32px' : '40px',
                     background: 'white',
                     border: '1px solid #e0e0e0',
                     borderRadius: '50%',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
                     cursor: 'pointer',
-                    fontSize: '1.2rem',
+                    fontSize: isMobile ? '1rem' : '1.2rem',
                     zIndex: 10,
-                    color: '#4f46e5'
+                    color: '#4f46e5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   ←
@@ -434,19 +465,22 @@ export default function HomePage() {
                   onClick={nextSlide}
                   style={{
                     position: 'absolute',
-                    right: '10px',
+                    right: '-15px',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    width: '40px',
-                    height: '40px',
+                    width: isMobile ? '32px' : '40px',
+                    height: isMobile ? '32px' : '40px',
                     background: 'white',
                     border: '1px solid #e0e0e0',
                     borderRadius: '50%',
                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
                     cursor: 'pointer',
-                    fontSize: '1.2rem',
+                    fontSize: isMobile ? '1rem' : '1.2rem',
                     zIndex: 10,
-                    color: '#4f46e5'
+                    color: '#4f46e5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   →
@@ -455,25 +489,26 @@ export default function HomePage() {
             )}
 
             {/* Indicadores */}
-            {mappedWorks.length > 1 && (
+            {Math.ceil(mappedWorks.length / (isMobile ? 1 : 3)) > 1 && (
               <div style={{
                 display: 'flex',
                 justifyContent: 'center',
-                gap: '10px',
+                gap: '8px',
                 marginTop: '20px'
               }}>
-                {mappedWorks.map((_, index) => (
+                {Array.from({ length: Math.ceil(mappedWorks.length / (isMobile ? 1 : 3)) }).map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
                     style={{
-                      width: '12px',
-                      height: '12px',
+                      width: isMobile ? '8px' : '10px',
+                      height: isMobile ? '8px' : '10px',
                       borderRadius: '50%',
                       background: currentSlide === index ? '#4f46e5' : '#ddd',
                       border: 'none',
                       cursor: 'pointer',
-                      transition: 'background 0.3s'
+                      transition: 'background 0.3s',
+                      padding: 0
                     }}
                   />
                 ))}
@@ -483,10 +518,10 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Cómo funciona - Estilo tarjetas como en search */}
+      {/* Cómo funciona */}
       <section style={{ marginBottom: "60px" }}>
         <h2 style={{ 
-          fontSize: "2rem", 
+          fontSize: isMobile ? "1.5rem" : "2rem", 
           marginBottom: "30px",
           background: "linear-gradient(135deg, #4f46e5, #10b981)",
           WebkitBackgroundClip: "text",
@@ -498,18 +533,19 @@ export default function HomePage() {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
           gap: '20px'
         }}>
           {[1, 2, 3].map((step) => (
             <div key={step} style={{
-              padding: "30px",
+              padding: isMobile ? '20px' : '30px',
               background: "white",
               border: "1px solid #e0e0e0",
               cursor: "pointer",
               transition: "all 0.2s",
               boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
-              textAlign: "center"
+              textAlign: "center",
+              borderRadius: "0"
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.transform = "translateY(-2px)";
@@ -522,24 +558,24 @@ export default function HomePage() {
               e.currentTarget.style.borderColor = "#e0e0e0";
             }}>
               <div style={{
-                width: "60px",
-                height: "60px",
+                width: isMobile ? '50px' : '60px',
+                height: isMobile ? '50px' : '60px',
                 background: "linear-gradient(135deg, #4f46e5, #10b981)",
                 color: "white",
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "1.5rem",
+                fontSize: isMobile ? '1.3rem' : '1.5rem',
                 fontWeight: "bold",
                 margin: "0 auto 20px"
               }}>
                 {step}
               </div>
-              <h3 style={{ marginBottom: "15px", color: "#333" }}>
+              <h3 style={{ marginBottom: "15px", color: "#333", fontSize: isMobile ? '1.1rem' : '1.2rem' }}>
                 {t.home?.steps?.[step-1]?.split('.')[0] || `Paso ${step}`}
               </h3>
-              <p style={{ color: "#666", lineHeight: "1.6" }}>
+              <p style={{ color: "#666", lineHeight: "1.6", fontSize: isMobile ? '0.9rem' : '1rem' }}>
                 {t.home?.steps?.[step-1]?.split('.')[1] || 'Descripción del paso'}
               </p>
             </div>
@@ -547,10 +583,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Beneficios - Estilo tarjetas como en search */}
+      {/* Beneficios */}
       <section style={{ marginBottom: "60px" }}>
         <h2 style={{ 
-          fontSize: "2rem", 
+          fontSize: isMobile ? "1.5rem" : "2rem", 
           marginBottom: "30px",
           background: "linear-gradient(135deg, #4f46e5, #10b981)",
           WebkitBackgroundClip: "text",
@@ -562,37 +598,41 @@ export default function HomePage() {
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: '20px'
         }}>
           <BenefitCard
             icon="🎨"
             title="Identidad Única"
             description="ID único garantizado para cada creador. Tu sello de autenticidad en el mundo digital."
+            isMobile={isMobile}
           />
           
           <BenefitCard
             icon="🌍"
             title="Alcance Global"
             description="Perfiles públicos con país y email. Conecta con audiencias de todo el mundo."
+            isMobile={isMobile}
           />
           
           <BenefitCard
             icon="🔍"
             title="Fácil de Encontrar"
             description="Comparte y busca fácilmente. Tu trabajo al alcance de quien lo busca."
+            isMobile={isMobile}
           />
           
           {/* Beneficio especial con gradiente */}
           <div style={{
-            padding: "30px",
+            padding: isMobile ? '20px' : '30px',
             background: "linear-gradient(135deg, #4f46e5, #10b981)",
             border: "none",
             cursor: "pointer",
             transition: "all 0.2s",
             boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
             textAlign: "center",
-            color: "white"
+            color: "white",
+            borderRadius: "0"
           }}
           onMouseOver={(e) => {
             e.currentTarget.style.transform = "translateY(-2px)";
@@ -603,21 +643,22 @@ export default function HomePage() {
             e.currentTarget.style.boxShadow = "0 2px 5px rgba(0,0,0,0.05)";
           }}>
             <div style={{
-              fontSize: "3rem",
+              fontSize: isMobile ? '2.5rem' : '3rem',
               marginBottom: "20px"
             }}>
               👑
             </div>
-            <h3 style={{ marginBottom: "15px", color: "white" }}>Royalty para Creadores</h3>
-            <p style={{ color: "rgba(255,255,255,0.9)", lineHeight: "1.6" }}>
+            <h3 style={{ marginBottom: "15px", color: "white", fontSize: isMobile ? '1.2rem' : '1.3rem' }}>Royalty para Creadores</h3>
+            <p style={{ color: "rgba(255,255,255,0.9)", lineHeight: "1.6", fontSize: isMobile ? '0.9rem' : '1rem' }}>
               Gana un 75% de regalías por cada venta de tus obras. Tu creatividad, tu recompensa.
             </p>
             <div style={{
               marginTop: "20px",
               background: "rgba(255,255,255,0.2)",
               padding: "10px",
-              fontSize: "1.5rem",
-              fontWeight: "bold"
+              fontSize: isMobile ? '1.3rem' : '1.5rem',
+              fontWeight: "bold",
+              borderRadius: "0"
             }}>
               75% Royalty
             </div>
@@ -627,12 +668,14 @@ export default function HomePage() {
             icon="📊"
             title="Estadísticas en Tiempo Real"
             description="Visualiza tus visitas, ventas y mensajes. Toda la información que necesitas."
+            isMobile={isMobile}
           />
           
           <BenefitCard
             icon="🚀"
             title="En Constante Evolución"
             description="Nuevas funcionalidades cada mes. Creciendo contigo y para ti."
+            isMobile={isMobile}
           />
         </div>
       </section>
@@ -640,44 +683,49 @@ export default function HomePage() {
       {/* Call to Action */}
       <div style={{
         background: "linear-gradient(135deg, #4f46e5, #10b981)",
-        padding: "60px 40px",
+        padding: isMobile ? "40px 20px" : "60px 40px",
         marginBottom: "40px",
         textAlign: "center",
-        boxShadow: "0 4px 15px rgba(0,0,0,0.1)"
+        boxShadow: "0 4px 15px rgba(0,0,0,0.1)",
+        borderRadius: "0"
       }}>
         <h2 style={{
-          fontSize: "2rem",
+          fontSize: isMobile ? "1.5rem" : "2rem",
           marginBottom: "20px",
           color: "white"
         }}>
           ¿Listo para empezar a ganar?
         </h2>
         <p style={{
-          fontSize: "1.2rem",
+          fontSize: isMobile ? "1rem" : "1.2rem",
           marginBottom: "30px",
           color: "rgba(255,255,255,0.95)",
           maxWidth: "600px",
-          margin: "0 auto 30px"
+          margin: "0 auto 30px",
+          padding: isMobile ? "0 10px" : "0"
         }}>
           Únete a nuestra comunidad de creadores, obtén tu Creator ID único y comienza a ganar el 75% de regalías por tus obras.
         </p>
         <div style={{
           display: 'flex',
           gap: '20px',
+          flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'center',
           flexWrap: 'wrap'
         }}>
           <Link
             href="/register"
             style={{
-              padding: "15px 40px",
+              padding: isMobile ? "12px 24px" : "15px 40px",
               background: "white",
               color: "#4f46e5",
               textDecoration: "none",
               fontWeight: "bold",
-              fontSize: "1.1rem",
+              fontSize: isMobile ? "1rem" : "1.1rem",
               transition: "all 0.2s",
-              boxShadow: "0 4px 15px rgba(0,0,0,0.2)"
+              boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
+              borderRadius: "0",
+              textAlign: "center"
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.background = "#f0f0f0";
@@ -693,14 +741,16 @@ export default function HomePage() {
           <Link
             href="/search"
             style={{
-              padding: "15px 40px",
+              padding: isMobile ? "12px 24px" : "15px 40px",
               background: "transparent",
               color: "white",
               textDecoration: "none",
               fontWeight: "bold",
-              fontSize: "1.1rem",
+              fontSize: isMobile ? "1rem" : "1.1rem",
               border: "2px solid white",
-              transition: "all 0.2s"
+              transition: "all 0.2s",
+              borderRadius: "0",
+              textAlign: "center"
             }}
             onMouseOver={(e) => {
               e.currentTarget.style.background = "white";
@@ -715,15 +765,23 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          body {
+            font-size: 14px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
-// Componentes auxiliares con el mismo estilo de search
-const StatCard = ({ number, label }: { number: number; label: string }) => (
+// Componentes auxiliares
+const StatCard = ({ number, label, isMobile }: { number: number; label: string; isMobile: boolean }) => (
   <div style={{ textAlign: 'center' }}>
     <div style={{ 
-      fontSize: '2.5rem', 
+      fontSize: isMobile ? '1.8rem' : '2.5rem', 
       fontWeight: 'bold',
       color: 'white',
       textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
@@ -732,22 +790,23 @@ const StatCard = ({ number, label }: { number: number; label: string }) => (
     </div>
     <div style={{ 
       color: 'rgba(255,255,255,0.9)',
-      fontSize: '1.1rem'
+      fontSize: isMobile ? '0.9rem' : '1.1rem'
     }}>
       {label}
     </div>
   </div>
 );
 
-const BenefitCard = ({ icon, title, description }: { icon: string; title: string; description: string }) => (
+const BenefitCard = ({ icon, title, description, isMobile }: { icon: string; title: string; description: string; isMobile: boolean }) => (
   <div style={{
-    padding: "30px",
+    padding: isMobile ? '20px' : '30px',
     background: "white",
     border: "1px solid #e0e0e0",
     cursor: "pointer",
     transition: "all 0.2s",
     boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
-    textAlign: "center"
+    textAlign: "center",
+    borderRadius: "0"
   }}
   onMouseOver={(e) => {
     e.currentTarget.style.transform = "translateY(-2px)";
@@ -760,12 +819,12 @@ const BenefitCard = ({ icon, title, description }: { icon: string; title: string
     e.currentTarget.style.borderColor = "#e0e0e0";
   }}>
     <div style={{
-      fontSize: "3rem",
+      fontSize: isMobile ? '2.5rem' : '3rem',
       marginBottom: "20px"
     }}>
       {icon}
     </div>
-    <h3 style={{ marginBottom: "15px", color: "#333" }}>{title}</h3>
-    <p style={{ color: "#666", lineHeight: "1.6" }}>{description}</p>
+    <h3 style={{ marginBottom: "15px", color: "#333", fontSize: isMobile ? '1.2rem' : '1.3rem' }}>{title}</h3>
+    <p style={{ color: "#666", lineHeight: "1.6", fontSize: isMobile ? '0.9rem' : '1rem' }}>{description}</p>
   </div>
 );
