@@ -10,7 +10,6 @@ interface WorkCardProps {
   showActions?: boolean
   onDelete?: (workId: string) => void
   t?: any
-  isMobile?: boolean 
 }
 
 const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t }: WorkCardProps) {
@@ -206,7 +205,7 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
           </span>
         </div>
 
-        {/* ✅ BOTONES DE ACCIÓN (si showActions es true) */}
+        {/* ✅ BOTONES DE ACCIÓN (cuando showActions es true) */}
         {showActions && (
           <div style={{
             marginTop: 'auto',
@@ -215,7 +214,6 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
             borderTop: '1px solid #eaeaea',
             paddingTop: '16px'
           }}>
-            {/* Botón Ver */}
             <Link
               href={`/work/${work.id}`}
               onClick={(e) => e.stopPropagation()}
@@ -232,15 +230,13 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
             >
               👁️ Ver
             </Link>
-            
-            {/* Botón Eliminar */}
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 onDelete?.(work.id)
               }}
               style={{
-                flex: 1,  
+                flex: 1,
                 padding: '8px',
                 background: '#dc2626',
                 color: 'white',
@@ -252,6 +248,32 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
             >
               🗑️
             </button>
+          </div>
+        )}
+
+        {/* ✅ BOTÓN PARA CUANDO NO HAY ACCIONES (Front Page, Tienda) */}
+        {!showActions && (
+          <div style={{
+            marginTop: 'auto',
+            paddingTop: '16px'
+          }}>
+            <Link
+              href={`/work/${work.id}`}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: 'block',
+                padding: '8px',
+                background: '#4f46e5',
+                color: 'white',
+                textDecoration: 'none',
+                textAlign: 'center',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                borderRadius: '4px'
+              }}
+            >
+              👁️ Ver detalles
+            </Link>
           </div>
         )}
       </div>
