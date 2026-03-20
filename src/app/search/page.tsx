@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useLanguage } from '@/contexts/LanguageContext'
 import { debounce } from 'lodash'
+import Pagination from '@/components/Pagination'
 
 // Mapa de países (constante fuera del componente para evitar recreación)
 const countryMap: Record<string, string> = {
@@ -22,8 +23,20 @@ const countryMap: Record<string, string> = {
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"name" | "id" | "email">("name");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const itemsPerPage = 10; // 10 resultados por página
   const router = useRouter();
   const { t } = useLanguage();
+
+  // Detectar tamaño de pantalla para responsive
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
 
   // Función de búsqueda memoizada
   const searchCreators = useCallback(async () => {
@@ -61,6 +74,11 @@ export default function SearchPage() {
     retry: 1,
   });
 
+  // Resetear página cuando cambia la búsqueda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [results]);
+
   // Debounce para evitar búsquedas en cada tecla
   const debouncedSearch = useMemo(
     () => debounce(() => refetch(), 300),
@@ -86,19 +104,33 @@ export default function SearchPage() {
     [results]
   );
 
+  // Paginación
+  const totalPages = Math.ceil(mappedResults.length / itemsPerPage);
+  const paginatedResults = mappedResults.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   const handleResultClick = useCallback((creatorId: string) => {
     router.push(`/${creatorId}`);
   }, [router]);
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll suave hacia arriba
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-  <div style={{ 
-    maxWidth: "1200px", 
-    margin: "0 auto",
-    padding: "0 20px"
-  }}>
+    <div style={{ 
+      maxWidth: "1200px", 
+      margin: "40px auto", 
+      padding: isMobile ? "0 15px" : "0 20px",
+      fontFamily: "sans-serif" 
+    }}>
       
       <h1 style={{ 
-        fontSize: "2.5rem", 
+        fontSize: isMobile ? "2rem" : "2.5rem", 
         marginBottom: "30px",
         background: "linear-gradient(135deg, #4f46e5, #10b981)",
         WebkitBackgroundClip: "text",
@@ -123,6 +155,7 @@ export default function SearchPage() {
           onClick={setSearchMode}
           label={t.search.byName}
           icon="👤"
+          isMobile={isMobile}
         />
         <ModeButton
           mode="id"
@@ -130,6 +163,7 @@ export default function SearchPage() {
           onClick={setSearchMode}
           label={t.search.byId}
           icon="🆔"
+          isMobile={isMobile}
         />
         <ModeButton
           mode="email"
@@ -137,6 +171,7 @@ export default function SearchPage() {
           onClick={setSearchMode}
           label={t.search.byEmail}
           icon="📧"
+          isMobile={isMobile}
         />
       </div>
 
@@ -145,7 +180,7 @@ export default function SearchPage() {
         <div style={{
           display: "flex",
           gap: "10px",
-          flexWrap: "wrap"
+          flexDirection: isMobile ? "column" : "row"
         }}>
           <input
             type="text"
@@ -163,18 +198,19 @@ export default function SearchPage() {
             }
             style={{
               flex: 1,
-              padding: "15px",
+              padding: isMobile ? "12px" : "15px",
               fontSize: "1rem",
               border: "2px solid #e0e0e0",
               outline: "none",
-              minWidth: "250px",
+              borderRadius: isMobile ? "4px" : "4px 0 0 4px",
+              width: "100%"
             }}
           />
           <button
             type="submit"
             disabled={isLoading}
             style={{
-              padding: "15px 30px",
+              padding: isMobile ? "12px" : "15px 30px",
               background: isLoading ? '#ccc' : 'linear-gradient(135deg, #4f46e5, #10b981)',
               color: "white",
               border: "none",
@@ -182,7 +218,9 @@ export default function SearchPage() {
               fontSize: "1rem",
               fontWeight: "bold",
               opacity: isLoading ? 0.7 : 1,
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              borderRadius: isMobile ? "4px" : "0 4px 4px 0",
+              width: isMobile ? "100%" : "auto"
             }}
           >
             {isLoading ? t.search.searching : t.search.button}
@@ -198,6 +236,7 @@ export default function SearchPage() {
           color: "#c62828",
           marginBottom: "20px",
           textAlign: "center",
+          borderRadius: "4px"
         }}>
           {error instanceof Error ? error.message : t.search.error}
         </div>
@@ -211,15 +250,36 @@ export default function SearchPage() {
           </h2>
           
           <div style={{ display: "grid", gap: "15px" }}>
-            {mappedResults.map((r) => (
+            {paginatedResults.map((r) => (
               <ResultCard
                 key={r.creator_id}
                 result={r}
                 onClick={handleResultClick}
                 t={t}
+                isMobile={isMobile}
               />
             ))}
           </div>
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              isMobile={isMobile}
+            />
+          )}
+
+          {/* Info de resultados */}
+          <p style={{
+            textAlign: 'center',
+            color: '#666',
+            fontSize: '0.9rem',
+            marginTop: '20px'
+          }}>
+            Mostrando {paginatedResults.length} de {mappedResults.length} resultados
+          </p>
         </div>
       )}
 
@@ -228,7 +288,9 @@ export default function SearchPage() {
         <div style={{
           padding: "40px",
           textAlign: "center",
-          color: "#666"
+          color: "#666",
+          background: "#f9f9f9",
+          borderRadius: "8px"
         }}>
           {t.search.noResults}
         </div>
@@ -238,7 +300,7 @@ export default function SearchPage() {
 }
 
 // Componente botón de modo memoizado
-const ModeButton = ({ mode, currentMode, onClick, label, icon }: any) => {
+const ModeButton = ({ mode, currentMode, onClick, label, icon, isMobile }: any) => {
   const isActive = mode === currentMode;
   
   return (
@@ -246,14 +308,15 @@ const ModeButton = ({ mode, currentMode, onClick, label, icon }: any) => {
       onClick={() => onClick(mode)}
       style={{
         flex: 1,
-        padding: "12px",
+        padding: isMobile ? "10px" : "12px",
         background: isActive ? "linear-gradient(135deg, #4f46e5, #10b981)" : "white",
         color: isActive ? "white" : "#333",
         border: "none",
         cursor: "pointer",
         fontWeight: isActive ? "bold" : "normal",
-        minWidth: "100px",
-        transition: 'all 0.2s'
+        minWidth: isMobile ? "80px" : "100px",
+        transition: 'all 0.2s',
+        borderRadius: "4px"
       }}
     >
       {icon} {label}
@@ -262,17 +325,18 @@ const ModeButton = ({ mode, currentMode, onClick, label, icon }: any) => {
 };
 
 // Componente tarjeta de resultado memoizado
-const ResultCard = ({ result, onClick, t }: any) => {
+const ResultCard = ({ result, onClick, t, isMobile }: any) => {
   return (
     <div
       onClick={() => onClick(result.creator_id)}
       style={{
-        padding: "20px",
+        padding: isMobile ? "15px" : "20px",
         background: "white",
         border: "1px solid #e0e0e0",
         cursor: "pointer",
         transition: "all 0.2s",
         boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
+        borderRadius: "8px"
       }}
       onMouseOver={(e) => {
         e.currentTarget.style.transform = "translateY(-2px)";
@@ -289,35 +353,41 @@ const ResultCard = ({ result, onClick, t }: any) => {
         display: "flex", 
         justifyContent: "space-between", 
         alignItems: "center",
-        flexWrap: "wrap",
-        gap: "15px"
+        flexDirection: isMobile ? "column" : "row",
+        gap: isMobile ? "15px" : "0"
       }}>
-        <div>
+        <div style={{ width: isMobile ? "100%" : "auto" }}>
           <h3 style={{ 
             margin: "0 0 8px 0", 
             color: "#333",
-            fontSize: "1.3rem"
+            fontSize: isMobile ? "1.2rem" : "1.3rem"
           }}>
             {result.display_name}
           </h3>
           
-          <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
-            <p style={{ margin: "5px 0", color: "#666" }}>
+          <div style={{ 
+            display: "flex", 
+            gap: isMobile ? "10px" : "15px", 
+            flexWrap: "wrap",
+            flexDirection: isMobile ? "column" : "row"
+          }}>
+            <p style={{ margin: "5px 0", color: "#666", fontSize: isMobile ? "0.9rem" : "1rem" }}>
               <strong>🆔 ID:</strong>{" "}
               <code style={{ 
                 background: "#f0f0f0", 
                 padding: "2px 6px", 
-                color: "#4f46e5"
+                color: "#4f46e5",
+                borderRadius: "4px"
               }}>
                 {result.creator_id}
               </code>
             </p>
             
-            <p style={{ margin: "5px 0", color: "#666" }}>
+            <p style={{ margin: "5px 0", color: "#666", fontSize: isMobile ? "0.9rem" : "1rem" }}>
               <strong>📧 {t.search.byEmail}:</strong> {result.email}
             </p>
             
-            <p style={{ margin: "5px 0", color: "#666" }}>
+            <p style={{ margin: "5px 0", color: "#666", fontSize: isMobile ? "0.9rem" : "1rem" }}>
               <strong>🌍 {t.work.country}:</strong> {result.country_name}
             </p>
           </div>
@@ -326,7 +396,8 @@ const ResultCard = ({ result, onClick, t }: any) => {
         <span style={{
           color: "#4f46e5",
           fontWeight: "bold",
-          fontSize: "0.9rem"
+          fontSize: isMobile ? "0.9rem" : "1rem",
+          alignSelf: isMobile ? "flex-start" : "center"
         }}>
           {t.search.viewProfile} →
         </span>

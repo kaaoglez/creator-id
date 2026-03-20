@@ -10,7 +10,60 @@ type Language = 'es' | 'en'
 type Texts = {
   nav: typeof es.nav;
   home: typeof es.home;
-  profile: typeof es.profile & {
+  profile: {
+    title: string;
+    personalInfo: string;
+    editButton: string;
+    yourCreatorId: string;
+    stats: {
+      works: string;
+      firstWork: string;
+      lastWork: string;
+      profileVisits: string;
+      totalMessages: string;
+      unreadMessages: string;
+      mostViewed: string;
+      inventory: string;
+      visits: string;
+      noCreatorId: string;
+      createOne: string;
+    };
+    actions: {
+      registerWork: string;
+      viewPublic: string;
+      contact: string;  // 👈 AÑADIDO
+    };
+    myWorks: string;
+    noWorks: string;
+    registerFirst: string;
+    dangerZone: string;
+    deleteWarning: string;
+    deleteButton: string;
+    confirmDelete: string;
+    deleteItems: string;
+    deleteList: string[];
+    confirmYes: string;
+    cancel: string;
+    sales: {
+      title: string;
+      totalSales: string;
+      completedSales: string;
+      pendingSales: string;
+      failedSales: string;
+      grossRevenue: string;
+      platformFee: string;
+      earnings: string;
+      byWork: string;
+      byMonth: string;
+      recent: string;
+      noSales: string;
+      sale: string;
+      sales: string;
+      buyer: string;
+      date: string;
+      amount: string;
+      status: string;
+    };
     footer: {
       description: string;
       quickLinks: string;
@@ -30,7 +83,7 @@ type Texts = {
       royalty: string;
       rights: string;
       madeWith: string;
-    }
+    };
   };
   work: typeof es.work;
   works: typeof es.works;

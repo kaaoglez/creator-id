@@ -71,7 +71,7 @@ export default function HomePage() {
             )
           `)
           .order('created_at', { ascending: false })
-          .limit(6)
+          .limit(9)
 
         setStats({
           creators: creators || 0,
@@ -90,16 +90,17 @@ export default function HomePage() {
     fetchData()
   }, [supabase])
 
-  // Auto-slide del carrusel
-  useEffect(() => {
-    if (recentWorks.length === 0) return
-    
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % recentWorks.length)
-    }, 5000)
-    
-    return () => clearInterval(interval)
-  }, [recentWorks.length])
+  // Auto-slide del carrusel - SIMPLE Y EFECTIVO
+useEffect(() => {
+  if (recentWorks.length === 0) return
+  
+  const interval = setInterval(() => {
+    const totalSlides = Math.ceil(recentWorks.length / (isMobile ? 1 : 3));
+    setCurrentSlide(prev => (prev + 1) % totalSlides);
+  }, 5000)
+  
+  return () => clearInterval(interval)
+}, [recentWorks.length, isMobile])
 
   const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault()
@@ -109,12 +110,22 @@ export default function HomePage() {
   }, [searchTerm, router])
 
   const nextSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev + 1) % recentWorks.length)
-  }, [recentWorks.length])
+    const totalSlides = Math.ceil(recentWorks.length / (isMobile ? 1 : 3));
+    if (currentSlide === totalSlides - 1) {
+      setCurrentSlide(0);
+    } else {
+      setCurrentSlide(prev => prev + 1);
+    }
+  }, [recentWorks.length, isMobile, currentSlide])
 
   const prevSlide = useCallback(() => {
-    setCurrentSlide((prev) => (prev - 1 + recentWorks.length) % recentWorks.length)
-  }, [recentWorks.length])
+    const totalSlides = Math.ceil(recentWorks.length / (isMobile ? 1 : 3));
+    if (currentSlide === 0) {
+      setCurrentSlide(totalSlides - 1);
+    } else {
+      setCurrentSlide(prev => prev - 1);
+    }
+  }, [recentWorks.length, isMobile, currentSlide])
 
   // Mapear works con nombres de países
   const mappedWorks = useMemo(() => 
@@ -233,7 +244,7 @@ export default function HomePage() {
         )}
       </div>
 
-            {/* Carrusel de Obras Recientes - MÚLTIPLES OBRAS POR SLIDE */}
+               {/* Carrusel de Obras Recientes - VERSIÓN SIMPLE QUE FUNCIONA */}
       {!isLoading && mappedWorks.length > 0 && (
         <section style={{ marginBottom: "60px" }}>
           <h2 style={{ 
@@ -248,22 +259,22 @@ export default function HomePage() {
           </h2>
 
           <div style={{ position: 'relative' }}>
-            {/* Carrusel */}
+            {/* Contenedor del carrusel */}
             <div ref={carouselRef} style={{
               width: '100%',
               overflow: 'hidden',
-              borderRadius: '0',
+              borderRadius: '8px',
               background: 'white',
               border: '1px solid #e0e0e0',
               boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
             }}>
               <div style={{
                 display: 'flex',
-                transition: 'transform 0.5s ease',
+                transition: 'transform 0.5s ease-in-out',
                 transform: `translateX(-${currentSlide * 100}%)`,
                 width: '100%'
               }}>
-                {/* Agrupar obras en grupos de 3 para desktop y 1 para móvil */}
+                {/* Slides con grupos de obras */}
                 {Array.from({ length: Math.ceil(mappedWorks.length / (isMobile ? 1 : 3)) }).map((_, groupIndex) => (
                   <div key={groupIndex} style={{
                     flex: '0 0 100%',
@@ -279,154 +290,12 @@ export default function HomePage() {
                       {mappedWorks
                         .slice(groupIndex * (isMobile ? 1 : 3), (groupIndex + 1) * (isMobile ? 1 : 3))
                         .map((work) => (
-                          <div key={work.id} style={{
-                            background: '#f9f9f9',
-                            borderRadius: '0',
-                            overflow: 'hidden',
-                            border: '1px solid #eaeaea',
-                            transition: 'transform 0.2s',
-                            cursor: 'pointer'
-                          }}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-4px)';
-                            e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = 'none';
-                          }}
-                          onClick={() => router.push(`/${work.creator_id}`)}>
-                            
-                            {/* Imagen de la obra */}
-                            <div style={{
-                              height: isMobile ? '150px' : '180px',
-                              background: '#f0f0f0',
-                              position: 'relative',
-                              overflow: 'hidden'
-                            }}>
-                              {work.file_url ? (
-                                <img
-                                  src={work.file_url}
-                                  alt={work.title}
-                                  style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover'
-                                  }}
-                                />
-                              ) : (
-                                <div style={{
-                                  width: '100%',
-                                  height: '100%',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-                                  color: 'white',
-                                  fontSize: '2rem'
-                                }}>
-                                  🎨
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Información de la obra */}
-                            <div style={{ padding: '12px' }}>
-                              <h3 style={{
-                                fontSize: isMobile ? '1rem' : '1.1rem',
-                                margin: '0 0 8px 0',
-                                color: '#333',
-                                fontWeight: 600,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis'
-                              }}>
-                                {work.title}
-                              </h3>
-                              
-                              {/* Descripción - AHORA COMO RESUMEN */}
-                              <p style={{
-                                fontSize: '0.85rem',
-                                color: '#666',
-                                marginBottom: '8px',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                height: '2.4em',
-                                lineHeight: '1.2'
-                              }}>
-                                {work.description 
-                                  ? (work.description.length > 80 
-                                    ? work.description.substring(0, 80) + '...' 
-                                    : work.description)
-                                  : 'Sin descripción'}
-                              </p>
-
-                              {/* Creator ID simplificado */}
-                              <div style={{
-                                background: '#f0f7ff',
-                                padding: '6px 8px',
-                                borderRadius: '0',
-                                fontSize: '0.75rem',
-                                marginBottom: '8px'
-                              }}>
-                                <code style={{
-                                  background: '#333',
-                                  color: '#0f0',
-                                  padding: '2px 4px',
-                                  fontSize: '0.7rem'
-                                }}>
-                                  {work.creator_id}
-                                </code>
-                              </div>
-
-                              {/* Creador */}
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                borderTop: '1px solid #eaeaea',
-                                paddingTop: '8px'
-                              }}>
-                                <div style={{
-                                  width: '24px',
-                                  height: '24px',
-                                  borderRadius: '50%',
-                                  background: work.creator?.avatar_url ? 'none' : 'linear-gradient(135deg, #4f46e5, #10b981)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  color: 'white',
-                                  fontSize: '0.8rem',
-                                  overflow: 'hidden'
-                                }}>
-                                  {work.creator?.avatar_url ? (
-                                    <img
-                                      src={work.creator.avatar_url}
-                                      alt={work.creator.display_name}
-                                      style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover'
-                                      }}
-                                    />
-                                  ) : (
-                                    work.creator?.display_name?.charAt(0) || '👤'
-                                  )}
-                                </div>
-                                <span style={{
-                                  fontSize: '0.8rem',
-                                  color: '#666',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis'
-                                }}>
-                                  {work.creator?.display_name?.split(' ')[0] || 'Creador'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
+                          <TarjetaObra 
+                            key={work.id} 
+                            work={work} 
+                            isMobile={isMobile} 
+                            router={router} 
+                          />
                         ))}
                     </div>
                   </div>
@@ -434,14 +303,17 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Botones de navegación - solo si hay más de un grupo */}
+            {/* Botones de navegación */}
             {Math.ceil(mappedWorks.length / (isMobile ? 1 : 3)) > 1 && (
               <>
                 <button
-                  onClick={prevSlide}
+                  onClick={() => {
+                    const totalSlides = Math.ceil(mappedWorks.length / (isMobile ? 1 : 3));
+                    setCurrentSlide(currentSlide === 0 ? totalSlides - 1 : currentSlide - 1);
+                  }}
                   style={{
                     position: 'absolute',
-                    left: '-15px',
+                    left: '10px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     width: isMobile ? '32px' : '40px',
@@ -462,10 +334,13 @@ export default function HomePage() {
                   ←
                 </button>
                 <button
-                  onClick={nextSlide}
+                  onClick={() => {
+                    const totalSlides = Math.ceil(mappedWorks.length / (isMobile ? 1 : 3));
+                    setCurrentSlide(currentSlide === totalSlides - 1 ? 0 : currentSlide + 1);
+                  }}
                   style={{
                     position: 'absolute',
-                    right: '-15px',
+                    right: '10px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     width: isMobile ? '32px' : '40px',
@@ -773,6 +648,158 @@ export default function HomePage() {
           }
         }
       `}</style>
+    </div>
+  );
+}
+
+// Componente TarjetaObra para reutilizar
+function TarjetaObra({ work, isMobile, router }: any) {
+  return (
+    <div style={{
+      background: '#f9f9f9',
+      borderRadius: '0',
+      overflow: 'hidden',
+      border: '1px solid #eaeaea',
+      transition: 'transform 0.2s',
+      cursor: 'pointer'
+    }}
+    onMouseOver={(e) => {
+      e.currentTarget.style.transform = 'translateY(-4px)';
+      e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+    }}
+    onMouseOut={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = 'none';
+    }}
+    onClick={() => router.push(`/${work.creator_id}`)}>
+      
+      {/* Imagen de la obra */}
+      <div style={{
+        height: isMobile ? '150px' : '180px',
+        background: '#f0f0f0',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {work.file_url ? (
+          <img
+            src={work.file_url}
+            alt={work.title}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
+        ) : (
+          <div style={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+            color: 'white',
+            fontSize: '2rem'
+          }}>
+            🎨
+          </div>
+        )}
+      </div>
+
+      {/* Información de la obra */}
+      <div style={{ padding: '12px' }}>
+        <h3 style={{
+          fontSize: isMobile ? '1rem' : '1.1rem',
+          margin: '0 0 8px 0',
+          color: '#333',
+          fontWeight: 600,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }}>
+          {work.title}
+        </h3>
+        
+        <p style={{
+          fontSize: '0.8rem',
+          color: '#666',
+          marginBottom: '8px',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          minHeight: '2.2rem'
+        }}>
+          {work.description 
+            ? (work.description.length > 70 
+              ? work.description.substring(0, 70) + '...' 
+              : work.description)
+            : 'Sin descripción'}
+        </p>
+
+        {/* Creator ID simplificado */}
+        <div style={{
+          background: '#f0f7ff',
+          padding: '6px 8px',
+          borderRadius: '0',
+          fontSize: '0.75rem',
+          marginBottom: '8px'
+        }}>
+          <code style={{
+            background: '#333',
+            color: '#0f0',
+            padding: '2px 4px',
+            fontSize: '0.7rem'
+          }}>
+            {work.creator_id}
+          </code>
+        </div>
+
+        {/* Creador */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          borderTop: '1px solid #eaeaea',
+          paddingTop: '8px'
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            background: work.creator?.avatar_url ? 'none' : 'linear-gradient(135deg, #4f46e5, #10b981)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontSize: '0.8rem',
+            overflow: 'hidden'
+          }}>
+            {work.creator?.avatar_url ? (
+              <img
+                src={work.creator.avatar_url}
+                alt={work.creator.display_name}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover'
+                }}
+              />
+            ) : (
+              work.creator?.display_name?.charAt(0) || '👤'
+            )}
+          </div>
+          <span style={{
+            fontSize: '0.8rem',
+            color: '#666',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
+          }}>
+            {work.creator?.display_name?.split(' ')[0] || 'Creador'}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

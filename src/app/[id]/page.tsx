@@ -6,11 +6,15 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import ContactModal from '@/components/ContactModal'
 import { useLanguage } from '@/contexts/LanguageContext'
-import WorkCard from '@/components/WorkCard'
+import WorkCardUnified from '@/components/WorkCardUnified'
+import Pagination from '@/components/Pagination'
 
 export default function CreatorPage({ params }: { params: Promise<{ id: string }> }) {
   const [id, setId] = useState<string | null>(null)
   const [isContactModalOpen, setIsContactModalOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
+  const itemsPerPage = 6 // 6 obras por página (2 filas de 3)
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -18,6 +22,15 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
       setId(id)
     })
   }, [params])
+
+  // Detectar tamaño de pantalla para responsive
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isMobile = windowWidth < 768
 
   // Query para obtener datos del creador
   const { data: creator, isLoading: loadingCreator, error: creatorError } = useQuery({
@@ -57,6 +70,11 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
     gcTime: 10 * 60 * 1000,
   })
 
+  // Resetear página cuando cambian las obras
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [works.length])
+
   // Registrar visita (efecto separado, no bloqueante)
   useEffect(() => {
     if (creator) {
@@ -69,6 +87,18 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
         .then()
     }
   }, [creator])
+
+  // Paginación
+  const totalPages = Math.ceil(works.length / itemsPerPage)
+  const paginatedWorks = works.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   if (loadingCreator || loadingWorks) {
     return (
@@ -107,7 +137,8 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
             background: "#4f46e5",
             color: "white",
             textDecoration: "none",
-            fontWeight: "bold"
+            fontWeight: "bold",
+            borderRadius: "4px"
           }}
         >
           {t.nav?.home || "Volver al inicio"}
@@ -122,9 +153,15 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
     : `${creator.full_first_name || ''} ${creator.full_last_name || ''}`.trim();
 
   return (
-    <div style={{ maxWidth: "800px", margin: "40px auto", padding: "0 20px" }}>
+    <div style={{ 
+      maxWidth: "1200px", 
+      margin: "40px auto", 
+      padding: isMobile ? "0 15px" : "0 20px",
+      fontFamily: "sans-serif" 
+    }}>
+      
       <h1 style={{ 
-        fontSize: "2.5rem", 
+        fontSize: isMobile ? "2rem" : "2.5rem", 
         marginBottom: "20px",
         background: "linear-gradient(135deg, #4f46e5, #10b981)",
         WebkitBackgroundClip: "text",
@@ -136,68 +173,101 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
       {/* Información del creador */}
       <div style={{
         border: "1px solid #eaeaea",
-        padding: "25px",
+        padding: isMobile ? "20px" : "25px",
         marginBottom: "30px",
         background: "white",
         boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
         display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '20px'
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: '20px',
+        borderRadius: '8px'
       }}>
         <div>
-          <p><strong>🆔 Creator ID:</strong> {creator.creator_id}</p>
-          <p><strong>🌍 {t.work?.country || "País"}:</strong> {creator.country_name} ({creator.country_code})</p>
-          <p><strong>📅 {t.profile?.stats?.firstWork || "Miembro desde"}:</strong> {new Date(creator.created_at).toLocaleDateString()}</p>
+          <p style={{ marginBottom: '8px' }}><strong>🆔 Creator ID:</strong> {creator.creator_id}</p>
+          <p style={{ marginBottom: '8px' }}><strong>🌍 {t.work?.country || "País"}:</strong> {creator.country_name} ({creator.country_code})</p>
+          <p style={{ marginBottom: '8px' }}><strong>📅 {t.profile?.stats?.firstWork || "Miembro desde"}:</strong> {new Date(creator.created_at).toLocaleDateString()}</p>
         </div>
         
         <button
           onClick={() => setIsContactModalOpen(true)}
           style={{
-            padding: '12px 24px',
+            padding: isMobile ? '12px 20px' : '12px 24px',
             background: 'linear-gradient(135deg, #4f46e5, #10b981)',
             color: 'white',
             border: 'none',
-            fontSize: '1rem',
+            fontSize: isMobile ? '0.95rem' : '1rem',
             fontWeight: 'bold',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            justifyContent: 'center',
+            gap: '8px',
+            borderRadius: '4px',
+            width: isMobile ? '100%' : 'auto'
           }}
         >
           <span>📧</span>
-          {t.profile?.actions?.registerWork || "Contactar creador"}
+          {t.profile?.actions?.contact || "Contactar creador"}
         </button>
       </div>
 
       {/* Lista de obras */}
-      <h2 style={{ marginBottom: "20px", fontSize: "1.8rem" }}>
+      <h2 style={{ marginBottom: "20px", fontSize: isMobile ? "1.5rem" : "1.8rem" }}>
         📚 {t.work?.creator || "Obras de"} {fullName}
       </h2>
 
       {works.length === 0 ? (
         <div style={{
           textAlign: "center",
-          padding: "40px",
+          padding: "60px 20px",
           background: "#f9f9f9",
-          color: "#666"
+          color: "#666",
+          borderRadius: '8px'
         }}>
-          <p style={{ fontSize: "1.2rem" }}>
+          <p style={{ fontSize: isMobile ? "1.1rem" : "1.2rem" }}>
             {t.profile?.noWorks || "Este creador aún no ha registrado obras."}
           </p>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '24px'
-        }}>
-          {works.map((work) => (
-            <WorkCard key={work.id} work={work} t={t} />
-          ))}
-        </div>
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+            gap: '20px',
+            marginBottom: '20px'
+          }}>
+            {paginatedWorks.map((work) => (
+              <WorkCardUnified
+                key={work.id}
+                work={work}
+                showActions={false}
+                isMobile={isMobile}
+              />
+            ))}
+          </div>
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              isMobile={isMobile}
+            />
+          )}
+
+          {/* Info de obras */}
+          <p style={{
+            textAlign: 'center',
+            color: '#666',
+            fontSize: '0.9rem',
+            marginTop: '20px'
+          }}>
+            Mostrando {paginatedWorks.length} de {works.length} obras
+          </p>
+        </>
       )}
 
       <ContactModal

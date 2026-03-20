@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import WorkCard from '@/components/WorkCard'
 import { useLanguage } from '@/contexts/LanguageContext'
+import WorkCardUnified from '@/components/WorkCardUnified'  // 👈 NUEVO
+import Pagination from '@/components/Pagination'  
 
 export default function ProfilePage() {
   const { user, loading, signOut } = useAuth()
@@ -19,6 +21,9 @@ export default function ProfilePage() {
   const supabase = createClient()
   const queryClient = useQueryClient()
   const { t, language } = useLanguage()
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 6 // 6 obras por página (2 filas de 3 en desktop)
+ 
 
   // Detectar tamaño de pantalla para responsive
   useEffect(() => {
@@ -26,7 +31,6 @@ export default function ProfilePage() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-
   const isMobile = windowWidth < 768
 
   // Textos de ventas con fallback
@@ -294,6 +298,13 @@ export default function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ['stats', creatorData?.creator_id] })
     },
   })
+
+// Paginación - AÑADE ESTO DESPUÉS DE LA QUERY DE works
+  const totalPages = Math.ceil(works.length / itemsPerPage)
+  const paginatedWorks = works.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   // Mutación para eliminar cuenta
   const deleteAccountMutation = useMutation({
@@ -1078,7 +1089,7 @@ export default function ProfilePage() {
         </Link>
       </div>
 
-      {/* Lista de obras - RESPONSIVE */}
+            {/* Lista de obras - CON PAGINACIÓN Y TARJETAS UNIFICADAS */}
       <h2 style={{ marginBottom: '20px' }}>📚 {t.profile?.myWorks || 'Mis obras registradas'}</h2>
 
       {works.length === 0 ? (
@@ -1107,21 +1118,42 @@ export default function ProfilePage() {
           </Link>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '24px',
-          marginBottom: '40px'
-        }}>
-          {works.map((work) => (
-            <WorkCard
-              key={work.id}
-              work={work}
-              showActions={true}
-              onDelete={(workId) => handleDeleteWork(workId, work.file_url)}
-            />
-          ))}
-        </div>
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+            gap: '20px',
+            marginBottom: '20px'
+          }}>
+            {paginatedWorks.map((work) => (
+              <WorkCardUnified
+                key={work.id}
+                work={work}
+                showActions={true}
+                onDelete={(workId) => handleDeleteWork(workId, work.file_url)}
+                isMobile={isMobile}
+              />
+            ))}
+          </div>
+
+          {/* Paginación */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            isMobile={isMobile}
+          />
+
+          {/* Info de total de obras */}
+          <p style={{
+            textAlign: 'center',
+            color: '#666',
+            fontSize: '0.9rem',
+            marginTop: '10px'
+          }}>
+            Mostrando {paginatedWorks.length} de {works.length} obras
+          </p>
+        </>
       )}
 
       {/* Sección de peligro - RESPONSIVE */}
