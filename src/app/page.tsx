@@ -38,28 +38,25 @@ export default function HomePage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  const isMobile = windowWidth < 768
+const isMobile = windowWidth < 768
 
+  // Resize listener
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Fetch data
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true)
       try {
-        // Obtener estadísticas generales
-        const { count: creators } = await supabase
-          .from('creators')
-          .select('*', { count: 'exact', head: true })
-        
-        const { count: works } = await supabase
-          .from('works')
-          .select('*', { count: 'exact', head: true })
-        
-        const { data: countries } = await supabase
-          .from('creators')
-          .select('country_code')
-
+        const { count: creators } = await supabase.from('creators').select('*', { count: 'exact', head: true })
+        const { count: works } = await supabase.from('works').select('*', { count: 'exact', head: true })
+        const { data: countries } = await supabase.from('creators').select('country_code')
         const uniqueCountries = new Set(countries?.map(c => c.country_code)).size
 
-        // Obtener obras recientes con datos del creador
         const { data: works_data } = await supabase
           .from('works')
           .select(`
@@ -72,14 +69,9 @@ export default function HomePage() {
             )
           `)
           .order('created_at', { ascending: false })
-          .limit(9)
+          .limit(12)
 
-        setStats({
-          creators: creators || 0,
-          works: works || 0,
-          countries: uniqueCountries || 0
-        })
-
+        setStats({ creators: creators || 0, works: works || 0, countries: uniqueCountries || 0 })
         setRecentWorks(works_data || [])
       } catch (error) {
         console.error('Error fetching data:', error)
@@ -87,7 +79,6 @@ export default function HomePage() {
         setIsLoading(false)
       }
     }
-
     fetchData()
   }, [supabase])
 

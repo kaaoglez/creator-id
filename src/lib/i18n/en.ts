@@ -57,8 +57,9 @@ export const en = {
       createOne: "Create my Creator ID",
     },
     actions: {
-      registerWork: "Register new work",
-      viewPublic: "View public profile"
+  registerWork: "Register new work",
+  viewPublic: "View public profile",
+  contact: "Contact creator"
     },
     myWorks: "My Registered Works",
     noWorks: "You haven't registered any works yet",

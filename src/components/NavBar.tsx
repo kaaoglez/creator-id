@@ -475,6 +475,9 @@ export default function NavBar() {
                   <MobileLink href="/messages" onClick={() => setMenuOpen(false)}>
                     📬 Mensajes {unreadCount > 0 && `(${unreadCount})`}
                   </MobileLink>
+                  <MobileLink href="/stats" onClick={() => setMenuOpen(false)}>
+                    📊 Estadísticas
+                  </MobileLink>
                   
                   {/* Enlaces de obras */}
                   {hasCreatorId && (
