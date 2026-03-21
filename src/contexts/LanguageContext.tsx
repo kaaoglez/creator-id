@@ -8,7 +8,10 @@ type Language = 'es' | 'en'
 
 // Definir el tipo completo basado en es
 type Texts = {
-  nav: typeof es.nav;
+  nav: typeof es.nav & {  // 👈 AÑADE & para extender
+    shop: string;
+    faq: string;
+  };
   home: typeof es.home;
   profile: typeof es.profile & {
     footer: {
@@ -40,7 +43,7 @@ type Texts = {
   register: typeof es.register;
   verify: typeof es.verify;
   errors: typeof es.errors;
-  shop: {  // 👈 AÑADE ESTA SECCIÓN
+  shop: {
     title: string;
     available: string;
     empty: string;

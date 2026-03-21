@@ -256,7 +256,7 @@ useEffect(() => {
             WebkitTextFillColor: "transparent",
             display: "inline-block"
           }}>
-            🎨 Obras Recientes
+            🎨 {t.home?.recentWorks || 'Obras Recientes'}
           </h2>
 
           <div style={{ position: 'relative' }}>
@@ -395,59 +395,60 @@ useEffect(() => {
       )}
 
       {/* Sección de Shop Room - Resumen */}
-      {!isLoading && mappedWorks.length > 0 && (
-        <section style={{ marginBottom: "60px" }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-            flexWrap: 'wrap',
-            gap: '15px'
-          }}>
-            <h2 style={{ 
-              fontSize: isMobile ? "1.5rem" : "2rem", 
-              margin: 0,
-              background: "linear-gradient(135deg, #4f46e5, #10b981)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              display: "inline-block"
-            }}>
-              🛍️ Obras Destacadas
-            </h2>
-            <Link
-              href="/shop"
-              style={{
-                padding: '8px 20px',
-                background: '#4f46e5',
-                color: 'white',
-                textDecoration: 'none',
-                fontWeight: 'bold',
-                borderRadius: '4px'
-              }}
-            >
-              Ver todas las obras →
-            </Link>
-          </div>
+{!isLoading && mappedWorks.length > 0 && (
+  <section style={{ marginBottom: "60px" }}>
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: '20px',
+      flexWrap: 'wrap',
+      gap: '15px'
+    }}>
+      <h2 style={{ 
+        fontSize: isMobile ? "1.5rem" : "2rem", 
+        margin: 0,
+        background: "linear-gradient(135deg, #4f46e5, #10b981)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        display: "inline-block"
+      }}>
+      	🛍️ {t.home?.featuredWorks || 'Obras Destacadas'}
+      </h2>
+      <Link
+        href="/shop"
+        style={{
+          padding: '8px 20px',
+          background: '#4f46e5',
+          color: 'white',
+          textDecoration: 'none',
+          fontWeight: 'bold',
+          borderRadius: '4px'
+        }}
+      >
+        {t.home?.viewAll || 'Ver todas las obras →'}
+      </Link>
+    </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-            gap: '24px'
-          }}>
-            {mappedWorks.slice(0, 6).map((work) => (
-              <WorkCard
-                key={work.id}
-                work={{
-                  ...work,
-                  creator: work.creator
-                }}
-                showActions={false}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+      gap: '24px'
+    }}>
+      {mappedWorks.slice(0, 6).map((work) => (
+        <WorkCard
+          key={work.id}
+          work={{
+            ...work,
+            creator: work.creator
+          }}
+          showActions={false}
+           t={t}
+        />
+      ))}
+    </div>
+  </section>
+)}
 
       {/* Cómo funciona */}
       <section style={{ marginBottom: "60px" }}>

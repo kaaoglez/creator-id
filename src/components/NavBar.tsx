@@ -130,38 +130,41 @@ export default function NavBar() {
           Creator-ID
         </Link>
 
-        {/* Desktop Menu - oculto en móviles */}
-        <div style={{ 
-          display: 'none', 
-          gap: '0.5rem', 
-          alignItems: 'center',
-        }} className="desktop-menu">
-          
-          <NavLink href="/" isActive={isActive('/')} scrolled={scrolled}>
-            {t.nav.home}
-          </NavLink>
-          
-          {user && (
-            <>
-            <NavLink href="/shop" isActive={isActive('/shop')} scrolled={scrolled}>
-      🛍️ Tienda
-    </NavLink>
-
-              <NavLink href="/search" isActive={isActive('/search')} scrolled={scrolled}>
-                {t.nav.search}
-              </NavLink>
-              <NavLink href="/verify" isActive={isActive('/verify')} scrolled={scrolled}>
-                {t.nav.verify}
-              </NavLink>
-              
-              {hasCreatorId && (
-                <NavLink href="/works/new" isActive={isActive('/works/new')} scrolled={scrolled}>
-                  {t.nav.registerWork}
-                </NavLink>
-              )}
-            </>
-          )}
-        </div>
+        {/* Desktop Menu - Enlaces públicos siempre visibles */}
+<div style={{ 
+  display: 'flex', 
+  gap: '0.5rem', 
+  alignItems: 'center',
+}} className="desktop-menu">
+  
+  {/* Enlaces públicos - siempre visibles */}
+  <NavLink href="/" isActive={isActive('/')} scrolled={scrolled}>
+    {t.nav.home}
+  </NavLink>
+  
+  <NavLink href="/shop" isActive={isActive('/shop')} scrolled={scrolled}>
+    🛍️ {t.nav.shop || 'Tienda'}
+  </NavLink>
+  
+  <NavLink href="/search" isActive={isActive('/search')} scrolled={scrolled}>
+    {t.nav.search}
+  </NavLink>
+  
+  <NavLink href="/verify" isActive={isActive('/verify')} scrolled={scrolled}>
+    {t.nav.verify}
+  </NavLink>
+  
+  {/* Enlaces que requieren usuario */}
+  {user && (
+    <>
+      {hasCreatorId && (
+        <NavLink href="/works/new" isActive={isActive('/works/new')} scrolled={scrolled}>
+          {t.nav.registerWork}
+        </NavLink>
+      )}
+    </>
+  )}
+</div>
 
         {/* Right section */}
         <div style={{ 
@@ -356,64 +359,65 @@ export default function NavBar() {
         </div>
       </div>
 
-            {/* Mobile menu - MEJORADO PARA MÁS OPCIONES */}
-      {menuOpen && (
+       {/* Mobile menu */}
+{menuOpen && (
+  <div style={{
+    position: 'fixed',
+    top: '60px',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'white',
+    padding: '20px',
+    overflowY: 'auto',
+    zIndex: 999,
+    animation: 'slideIn 0.3s ease'
+  }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px'
+    }}>
+      {/* Enlaces públicos - siempre visibles */}
+      <div style={{ marginBottom: '16px' }}>
         <div style={{
-          position: 'fixed',
-          top: '60px',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'white',
-          padding: '20px',
-          overflowY: 'auto',
-          zIndex: 999,
-          animation: 'slideIn 0.3s ease'
+          padding: '8px 0',
+          color: '#666',
+          fontSize: '0.7rem',
+          textTransform: 'uppercase',
+          letterSpacing: '1px'
         }}>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px'
-          }}>
-            {/* Enlaces principales */}
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{
-                padding: '8px 0',
-                color: '#666',
-                fontSize: '0.7rem',
-                textTransform: 'uppercase',
-                letterSpacing: '1px'
-              }}>
-                Principal
-              </div>
-              <MobileLink href="/" onClick={() => setMenuOpen(false)}>
-                🏠 Inicio
-              </MobileLink>
-              <MobileLink href="/shop" onClick={() => setMenuOpen(false)}>
-                🛍️ Tienda
-              </MobileLink>
-            </div>
+          Principal
+        </div>
+        <MobileLink href="/" onClick={() => setMenuOpen(false)}>
+          🏠 Inicio
+        </MobileLink>
+        <MobileLink href="/shop" onClick={() => setMenuOpen(false)}>
+          🛍️ Tienda
+        </MobileLink>
+        <MobileLink href="/faq" onClick={() => setMenuOpen(false)}>
+          ❓ Ayuda / FAQ
+        </MobileLink>
+      </div>
 
-            {/* Enlaces de búsqueda */}
-            {user && (
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{
-                  padding: '8px 0',
-                  color: '#666',
-                  fontSize: '0.7rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px'
-                }}>
-                  Explorar
-                </div>
-                <MobileLink href="/search" onClick={() => setMenuOpen(false)}>
-                  🔍 Buscar
-                </MobileLink>
-                <MobileLink href="/verify" onClick={() => setMenuOpen(false)}>
-                  ✅ Verificar
-                </MobileLink>
-              </div>
-            )}
+      {/* Enlaces de exploración */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{
+          padding: '8px 0',
+          color: '#666',
+          fontSize: '0.7rem',
+          textTransform: 'uppercase',
+          letterSpacing: '1px'
+        }}>
+          Explorar
+        </div>
+        <MobileLink href="/search" onClick={() => setMenuOpen(false)}>
+          🔍 Buscar
+        </MobileLink>
+        <MobileLink href="/verify" onClick={() => setMenuOpen(false)}>
+          ✅ Verificar
+        </MobileLink>
+      </div>
 
             {/* Enlaces de usuario (no autenticado) */}
             {!user && (

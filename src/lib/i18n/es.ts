@@ -5,6 +5,8 @@ export const es = {
     login: "Iniciar Sesión",
     registerWork: "Registrar Obra",
     search: "Buscar",
+    shop: "Tienda",
+    faq: "Ayuda",
     verify: "Verificar",
     profile: "Mi Perfil",
     messages: "Mensajes",
@@ -30,7 +32,11 @@ export const es = {
       "Fácil de compartir y buscar por cualquiera.",
       "Preparado para añadir enlaces sociales, biografía y más."
     ],
-    searchPlaceholder: "Ingresa un Creator ID"
+    searchPlaceholder: "Ingresa un Creator ID",
+    recentWorks: "Obras Recientes",
+    featuredWorks: "Obras Destacadas",
+    viewAll: "Ver todas las obras →",
+    viewDetails: "Ver detalles"
   },
   profile: {
     title: "Mi Perfil",

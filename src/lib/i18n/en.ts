@@ -5,6 +5,8 @@ export const en = {
     login: "Login",
     registerWork: "Register Work",
     search: "Search",
+    shop: "Shop",
+    faq: "Help",
     verify: "Verify",
     profile: "My Profile",
     messages: "Messages",
@@ -30,7 +32,11 @@ export const en = {
       "Easy to share and searchable by anyone.",
       "Future-ready for adding social links, bios, and more."
     ],
-    searchPlaceholder: "Enter a Creator ID"
+    searchPlaceholder: "Enter a Creator ID",
+    recentWorks: "Recent Works",
+    featuredWorks: "Featured Works",
+    viewAll: "View all works →",
+    viewDetails: "View details"
   },
   profile: {
     title: "My Profile",

@@ -206,76 +206,30 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
         </div>
 
         {/* ✅ BOTONES DE ACCIÓN (cuando showActions es true) */}
-        {showActions && (
-          <div style={{
-            marginTop: 'auto',
-            display: 'flex',
-            gap: '8px',
-            borderTop: '1px solid #eaeaea',
-            paddingTop: '16px'
-          }}>
-            <Link
-              href={`/work/${work.id}`}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: '#4f46e5',
-                color: 'white',
-                textDecoration: 'none',
-                textAlign: 'center',
-                fontSize: '0.9rem',
-                cursor: 'pointer'
-              }}
-            >
-              👁️ Ver
-            </Link>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onDelete?.(work.id)
-              }}
-              style={{
-                flex: 1,
-                padding: '8px',
-                background: '#dc2626',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.9rem',
-                fontWeight: 'bold'
-              }}
-            >
-              🗑️
-            </button>
-          </div>
-        )}
-
-        {/* ✅ BOTÓN PARA CUANDO NO HAY ACCIONES (Front Page, Tienda) */}
-        {!showActions && (
-          <div style={{
-            marginTop: 'auto',
-            paddingTop: '16px'
-          }}>
-            <Link
-              href={`/work/${work.id}`}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                display: 'block',
-                padding: '8px',
-                background: '#4f46e5',
-                color: 'white',
-                textDecoration: 'none',
-                textAlign: 'center',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                borderRadius: '4px'
-              }}
-            >
-              👁️ Ver detalles
-            </Link>
-          </div>
-        )}
+      {!showActions && (
+  <div style={{
+    marginTop: 'auto',
+    paddingTop: '16px'
+  }}>
+    <Link
+      href={`/work/${work.id}`}
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        display: 'block',
+        padding: '8px',
+        background: '#4f46e5',
+        color: 'white',
+        textDecoration: 'none',
+        textAlign: 'center',
+        fontSize: '0.9rem',
+        cursor: 'pointer',
+        borderRadius: '4px'
+      }}
+    >
+      👁️ {t?.home?.viewDetails || 'Ver detalles'}
+    </Link>
+  </div>
+)}
       </div>
     </div>
   )
