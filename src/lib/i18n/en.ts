@@ -5,14 +5,14 @@ export const en = {
     login: "Login",
     registerWork: "Register Work",
     search: "Search",
-    shop: "Shop",
-    faq: "Help",
     verify: "Verify",
     profile: "My Profile",
     messages: "Messages",
     logout: "Logout",
     publicProfile: "View public profile",
     completeProfile: "Complete profile",
+    shop: "Shop",
+    stats: "Statistics"
   },
   home: {
     title: "Creator-ID",
@@ -41,8 +41,8 @@ export const en = {
   profile: {
     title: "My Profile",
     personalInfo: "Personal Information",
-    editButton: "Edit profile", // 👈 NUEVO
-    yourCreatorId: "Your Creator ID", // 👈 NUEVO
+    editButton: "Edit profile",
+    yourCreatorId: "Your Creator ID",
     stats: {
       works: "Registered works",
       firstWork: "First work",
@@ -54,12 +54,12 @@ export const en = {
       inventory: "Works Statistics",
       visits: "visits",
       noCreatorId: "You don't have a Creator ID yet",
-      createOne: "Create my Creator ID",
+      createOne: "Create my Creator ID"
     },
     actions: {
-  registerWork: "Register new work",
-  viewPublic: "View public profile",
-  contact: "Contact creator"
+      registerWork: "Register new work",
+      viewPublic: "View public profile",
+      contact: "Contact creator"
     },
     myWorks: "My Registered Works",
     noWorks: "You haven't registered any works yet",
@@ -68,8 +68,8 @@ export const en = {
     deleteWarning: "Deleting your account is irreversible. All your data, including works, stats and messages will be deleted.",
     deleteButton: "Permanently delete my account",
     confirmDelete: "Are you absolutely sure? This action cannot be undone.",
-    deleteItems: "The following will be deleted:", // 👈 NUEVO
-    deleteList: [ // 👈 NUEVO
+    deleteItems: "The following will be deleted:",
+    deleteList: [
       "Your creator profile",
       "All your registered works",
       "Images of your works",
@@ -79,8 +79,6 @@ export const en = {
     ],
     confirmYes: "Yes, delete my account",
     cancel: "Cancel",
-    
-    // 👇 SALES DENTRO DE PROFILE
     sales: {
       title: "💰 Sales Statistics",
       totalSales: "Total sales",
@@ -101,7 +99,7 @@ export const en = {
       amount: "Amount",
       status: "Status"
     },
-     footer: {
+    footer: {
       description: "Create your unique identity as a creator and share your public profile easily.",
       quickLinks: "Quick Links",
       home: "Home",
@@ -128,6 +126,7 @@ export const en = {
       plural: "visits"
     },
     backToProfile: "Back to profile",
+    backToHome: "Back to home",
     creator: "Creator",
     country: "Country",
     description: "Description",
@@ -144,7 +143,7 @@ export const en = {
     checkoutInfo: "Complete your information to continue",
     name: "Full name",
     confirm: "Confirm purchase",
-    securePayment: "Secure payment with Stripe",
+    securePayment: "Secure payment with Stripe"
   },
   works: {
     register: "Register new work",
@@ -163,7 +162,7 @@ export const en = {
     creator: "Creator",
     registeredDate: "Registered",
     price: "Price (USD)",
-    priceHelp: "Enter the price in dollars (e.g., 15.99)",
+    priceHelp: "Enter the price in dollars (e.g., 15.99)"
   },
   search: {
     title: "Search Creators",
@@ -265,12 +264,43 @@ export const en = {
     creatorExists: "Error creating Creator ID. You might already have one.",
     priceNegative: "The price cannot be negative"
   },
- shop: {
+  shop: {
     title: "Art Shop",
     available: "works available",
     empty: "No works registered yet.",
     first: "Register first work",
     contact: "Contact",
     details: "View details"
-  }
+  },
+  stats: {
+    title: "Statistics",
+    profileVisits: "Profile visits",
+    registeredWorks: "Registered works",
+    withPrice: "with price",
+    messages: "Messages",
+    unread: "unread",
+    sales: "Sales",
+    grossRevenue: "Gross revenue",
+    commission: "Commission (25%)",
+    earnings: "Your earnings (75%)",
+    monthlyVisits: "Monthly visits",
+    topWorks: "Most visited works",
+    worksDetail: "Works detail",
+    work: "Work",
+    visits: "Visits",
+    revenue: "Revenue",
+    actions: "Actions",
+    view: "View",
+    delete: "Delete",
+    backToProfile: "Back to profile",
+    loading: "Loading statistics...",
+    error: "Error loading statistics",
+    works: "works",
+  },
+  pagination: {
+  previous: "Previous",
+  next: "Next",
+  showing: "Showing",
+  of: "of"
+}
 }

@@ -8,9 +8,9 @@ type Language = 'es' | 'en'
 
 // Definir el tipo completo basado en es
 type Texts = {
-  nav: typeof es.nav & {  // 👈 AÑADE & para extender
+  nav: typeof es.nav & {
     shop: string;
-    faq: string;
+    stats: string;
   };
   home: typeof es.home;
   profile: typeof es.profile & {
@@ -43,14 +43,9 @@ type Texts = {
   register: typeof es.register;
   verify: typeof es.verify;
   errors: typeof es.errors;
-  shop: {
-    title: string;
-    available: string;
-    empty: string;
-    first: string;
-    contact: string;
-    details: string;
-  };
+  shop: typeof es.shop;           // 👈 SOLO ESTA LÍNEA
+  stats: typeof es.stats;          // 👈 SOLO ESTA LÍNEA
+  pagination: typeof es.pagination; // 👈 AÑADE ESTA LÍNEA
 }
 
 interface LanguageContextType {

@@ -5,14 +5,14 @@ export const es = {
     login: "Iniciar Sesión",
     registerWork: "Registrar Obra",
     search: "Buscar",
-    shop: "Tienda",
-    faq: "Ayuda",
     verify: "Verificar",
     profile: "Mi Perfil",
     messages: "Mensajes",
     logout: "Cerrar sesión",
     publicProfile: "Ver perfil público",
     completeProfile: "Completar perfil",
+    shop: "Tienda",
+    stats: "Estadísticas"
   },
   home: {
     title: "Creator-ID",
@@ -41,7 +41,7 @@ export const es = {
   profile: {
     title: "Mi Perfil",
     personalInfo: "Información personal",
-    editButton: "Editar perfil", // 👈 NUEVO
+    editButton: "Editar perfil",
     yourCreatorId: "Tu Creator ID",
     stats: {
       works: "Obras registradas",
@@ -54,12 +54,12 @@ export const es = {
       inventory: "Estadísticas de Obras",
       visits: "visitas",
       noCreatorId: "Aún no tienes un Creator ID",
-      createOne: "Crear mi Creator ID",
+      createOne: "Crear mi Creator ID"
     },
     actions: {
-  registerWork: "Registrar nueva obra",
-  viewPublic: "Ver perfil público",
-  contact: "Contactar creador"
+      registerWork: "Registrar nueva obra",
+      viewPublic: "Ver perfil público",
+      contact: "Contactar creador"
     },
     myWorks: "Mis obras registradas",
     noWorks: "Aún no has registrado ninguna obra",
@@ -68,8 +68,8 @@ export const es = {
     deleteWarning: "Eliminar tu cuenta es irreversible. Se borrarán todos tus datos, incluyendo obras, estadísticas y mensajes.",
     deleteButton: "Eliminar mi cuenta permanentemente",
     confirmDelete: "¿Estás completamente seguro? Esta acción no se puede deshacer.",
-    deleteItems: "Se eliminarán:", // 👈 NUEVO
-    deleteList: [ // 👈 NUEVO
+    deleteItems: "Se eliminarán:",
+    deleteList: [
       "Tu perfil de creador",
       "Todas tus obras registradas",
       "Las imágenes de tus obras",
@@ -79,8 +79,6 @@ export const es = {
     ],
     confirmYes: "Sí, eliminar mi cuenta",
     cancel: "Cancelar",
-
-    // 👇 SALES DENTRO DE PROFILE
     sales: {
       title: "💰 Estadísticas de Ventas",
       totalSales: "Ventas totales",
@@ -128,6 +126,7 @@ export const es = {
       plural: "visitas"
     },
     backToProfile: "Volver al perfil",
+    backToHome: "Volver al inicio",
     creator: "Creador",
     country: "País",
     description: "Descripción",
@@ -144,7 +143,7 @@ export const es = {
     checkoutInfo: "Completa tus datos para continuar",
     name: "Nombre completo",
     confirm: "Confirmar compra",
-    securePayment: "Pago seguro con Stripe",
+    securePayment: "Pago seguro con Stripe"
   },
   works: {
     register: "Registrar nueva obra",
@@ -163,7 +162,7 @@ export const es = {
     creator: "Creador",
     registeredDate: "Registrada",
     price: "Precio (USD)",
-    priceHelp: "Ingresa el precio en dólares (ej: 15.99)",
+    priceHelp: "Ingresa el precio en dólares (ej: 15.99)"
   },
   search: {
     title: "Buscar Creadores",
@@ -263,14 +262,45 @@ export const es = {
     genericError: "Error desconocido",
     countryNotFound: "País no encontrado",
     creatorExists: "Error creando Creator ID. Puede que ya tengas uno.",
-    priceNegative: "El precio no puede ser negativo",
+    priceNegative: "El precio no puede ser negativo"
   },
-  hop: {
+  shop: {
     title: "Tienda de Obras",
     available: "obras disponibles",
     empty: "No hay obras registradas aún.",
     first: "Registrar primera obra",
     contact: "Contactar",
     details: "Ver detalles"
-  }
+  },
+  stats: {
+    title: "Estadísticas",
+    profileVisits: "Visitas al perfil",
+    registeredWorks: "Obras registradas",
+    withPrice: "con precio",
+    messages: "Mensajes",
+    unread: "no leídos",
+    sales: "Ventas",
+    grossRevenue: "Ingresos brutos",
+    commission: "Comisión (25%)",
+    earnings: "Tus ganancias (75%)",
+    monthlyVisits: "Visitas mensuales",
+    topWorks: "Obras más visitadas",
+    worksDetail: "Detalle por obra",
+    work: "Obra",
+    visits: "Visitas",
+    revenue: "Ingresos",
+    actions: "Acciones",
+    view: "Ver",
+    delete: "Eliminar",
+    backToProfile: "Volver al perfil",
+    loading: "Cargando estadísticas...",
+    error: "Error al cargar las estadísticas",
+    works: "obras",
+  },
+  pagination: {
+  previous: "Anterior",
+  next: "Siguiente",
+  showing: "Mostrando",
+  of: "de"
+}
 }

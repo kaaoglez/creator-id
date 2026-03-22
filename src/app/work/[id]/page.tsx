@@ -5,11 +5,12 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useQuery } from '@tanstack/react-query'
-import CheckoutButton from '@/components/CheckoutButton' // 
+import { useTranslation } from '@/hooks/useTranslation'
+import CheckoutButton from '@/components/CheckoutButton'
 
 export default function WorkPage({ params }: { params: Promise<{ id: string }> }) {
   const [id, setId] = useState<string | null>(null)
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   useEffect(() => {
     params.then(({ id }) => {
@@ -32,18 +33,15 @@ export default function WorkPage({ params }: { params: Promise<{ id: string }> }
         throw new Error(t.verify?.notFound || 'Obra no encontrada')
       }
 
-      // Registrar visita
       await supabase
         .from('work_visits')
         .insert([{ work_id: workData.id }])
 
-      // Obtener visitas
       const { count } = await supabase
         .from('work_visits')
         .select('*', { count: 'exact', head: true })
         .eq('work_id', workData.id)
 
-      // Obtener datos del creador
       const { data: creatorData } = await supabase
         .from('creators')
         .select('full_first_name, full_last_name, first_name, last_name, creator_id, country_name')
@@ -59,6 +57,10 @@ export default function WorkPage({ params }: { params: Promise<{ id: string }> }
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
   })
+
+  // 👇 USAR TRADUCCIÓN PARA LA DESCRIPCIÓN
+  const { translatedText: translatedDescription, isTranslating: isTranslatingDesc } = useTranslation(work?.description || '')
+  const { translatedText: translatedTitle, isTranslating: isTranslatingTitle } = useTranslation(work?.title || '')
 
   const creatorName = useCallback(() => {
     if (!work?.creator) return t.work?.creator || 'Creador'
@@ -95,8 +97,8 @@ export default function WorkPage({ params }: { params: Promise<{ id: string }> }
     return (
       <div style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
         <h1 style={{ fontSize: '2rem', color: '#333' }}>🔍 {t.verify?.notFound || 'Obra no encontrada'}</h1>
-        <Link href="/profile" style={{ color: '#4f46e5', display: 'block', marginTop: '20px' }}>
-          ← {t.work?.backToProfile || 'Volver al perfil'}
+        <Link href="/" style={{ color: '#4f46e5', display: 'block', marginTop: '20px' }}>
+          ← Volver al inicio
         </Link>
       </div>
     )
@@ -109,10 +111,12 @@ export default function WorkPage({ params }: { params: Promise<{ id: string }> }
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '30px'
+        marginBottom: '30px',
+        flexWrap: 'wrap',
+        gap: '10px'
       }}>
-        <Link href="/profile" style={{ color: '#4f46e5', textDecoration: 'none' }}>
-          ← {t.work?.backToProfile || 'Volver al perfil'}
+        <Link href="/" style={{ color: '#4f46e5', textDecoration: 'none' }}>
+          ← Volver al inicio
         </Link>
         <div style={{ 
           background: '#f0f7ff', 
@@ -123,29 +127,30 @@ export default function WorkPage({ params }: { params: Promise<{ id: string }> }
         </div>
       </div>
 
-     {/* Título y precio */}
-<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-  <h1 style={{ 
-    fontSize: '2.5rem', 
-    margin: 0,
-    background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent'
-  }}>
-    {work.title}
-  </h1>
-  {work.price && (
-    <div style={{
-      fontSize: '2rem',
-      fontWeight: 'bold',
-      color: '#4f46e5',
-      background: '#f0f7ff',
-      padding: '10px 20px'
-    }}>
-      ${work.price}
-    </div>
-  )}
-</div>
+      {/* Título y precio */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+        <h1 style={{ 
+          fontSize: '2.5rem', 
+          margin: 0,
+          background: 'linear-gradient(135deg, #4f46e5, #10b981)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent'
+        }}>
+          {/* 👇 TÍTULO TRADUCIDO */}
+          {isTranslatingTitle ? 'Traduciendo...' : (language === 'en' ? translatedTitle : work.title)}
+        </h1>
+        {work.price && (
+          <div style={{
+            fontSize: '2rem',
+            fontWeight: 'bold',
+            color: '#4f46e5',
+            background: '#f0f7ff',
+            padding: '10px 20px'
+          }}>
+            ${work.price}
+          </div>
+        )}
+      </div>
 
       {/* Info del creador */}
       {work.creator && (
@@ -160,16 +165,23 @@ export default function WorkPage({ params }: { params: Promise<{ id: string }> }
         </div>
       )}
 
-      {/* Descripción */}
+      {/* 👇 DESCRIPCIÓN TRADUCIDA */}
       {work.description && (
         <div style={{ marginBottom: '30px' }}>
           <h3>{t.work?.description || 'Descripción'}</h3>
           <div style={{ 
             background: '#f9fafb', 
             padding: '20px', 
-            whiteSpace: 'pre-wrap'
+            whiteSpace: 'pre-wrap',
+            minHeight: '80px'
           }}>
-            {work.description}
+            {isTranslatingDesc ? (
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <span>🔄</span> Traduciendo...
+              </div>
+            ) : (
+              (language === 'en' ? translatedDescription : work.description)
+            )}
           </div>
         </div>
       )}
@@ -232,30 +244,30 @@ export default function WorkPage({ params }: { params: Promise<{ id: string }> }
         </div>
       )}
 
-      {/* Botón de compra (por ahora solo visual) */}
-    {work.price && (
-  <div style={{ 
-    marginTop: '40px', 
-    padding: '20px', 
-    background: '#f0f7ff',
-    textAlign: 'center'
-  }}>
-    <h3 style={{ marginBottom: '15px', color: '#333' }}>
-      {t.work?.interested || '¿Interesado en esta obra?'}
-    </h3>
-    
-    <CheckoutButton
-      workId={work.id}
-      workTitle={work.title}
-      price={work.price}
-      creatorName={creatorName()}
-    />
+      {/* Botón de compra */}
+      {work.price && (
+        <div style={{ 
+          marginTop: '40px', 
+          padding: '20px', 
+          background: '#f0f7ff',
+          textAlign: 'center'
+        }}>
+          <h3 style={{ marginBottom: '15px', color: '#333' }}>
+            {t.work?.interested || '¿Interesado en esta obra?'}
+          </h3>
+          
+          <CheckoutButton
+            workId={work.id}
+            workTitle={work.title}
+            price={work.price}
+            creatorName={creatorName()}
+          />
 
-    <p style={{ marginTop: '15px', color: '#666', fontSize: '0.9rem' }}>
-      {t.work?.securePayment || 'Pago seguro con Stripe'}
-    </p>
-  </div>
-)}
+          <p style={{ marginTop: '15px', color: '#666', fontSize: '0.9rem' }}>
+            {t.work?.securePayment || 'Pago seguro con Stripe'}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

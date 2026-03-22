@@ -1,5 +1,7 @@
 'use client'
 
+import { useLanguage } from '@/contexts/LanguageContext'
+
 interface PaginationProps {
   currentPage: number
   totalPages: number
@@ -8,6 +10,8 @@ interface PaginationProps {
 }
 
 export default function Pagination({ currentPage, totalPages, onPageChange, isMobile = false }: PaginationProps) {
+  const { t } = useLanguage()
+  
   if (totalPages <= 1) return null
 
   const getPageNumbers = (): (number | string)[] => {
@@ -37,6 +41,10 @@ export default function Pagination({ currentPage, totalPages, onPageChange, isMo
     return rangeWithDots
   }
 
+  // Textos traducidos
+  const previousText = t.pagination?.previous || 'Anterior'
+  const nextText = t.pagination?.next || 'Siguiente'
+
   return (
     <div style={{
       display: 'flex',
@@ -59,7 +67,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, isMo
           fontSize: isMobile ? '0.8rem' : '0.9rem'
         }}
       >
-        ← Anterior
+        ← {previousText}
       </button>
 
       {getPageNumbers().map((page, index) => (
@@ -95,7 +103,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange, isMo
           fontSize: isMobile ? '0.8rem' : '0.9rem'
         }}
       >
-        Siguiente →
+        {nextText} →
       </button>
     </div>
   )

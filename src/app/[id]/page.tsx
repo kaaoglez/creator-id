@@ -187,7 +187,7 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
         <div>
           <p style={{ marginBottom: '8px' }}><strong>🆔 Creator ID:</strong> {creator.creator_id}</p>
           <p style={{ marginBottom: '8px' }}><strong>🌍 {t.work?.country || "País"}:</strong> {creator.country_name} ({creator.country_code})</p>
-          <p style={{ marginBottom: '8px' }}><strong>📅 {t.profile?.stats?.firstWork || "Miembro desde"}:</strong> {new Date(creator.created_at).toLocaleDateString()}</p>
+          <p style={{ marginBottom: '8px' }}><strong>📅 Miembro desde:</strong> {new Date(creator.created_at).toLocaleDateString()}</p>
         </div>
         
         <button

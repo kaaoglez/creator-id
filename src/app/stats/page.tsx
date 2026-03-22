@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useLanguage } from '@/contexts/LanguageContext'
 import Link from 'next/link'
+import Pagination from '@/components/Pagination'
 
 export default function StatsPage() {
   const { user, loading } = useAuth()
@@ -27,7 +28,19 @@ export default function StatsPage() {
     topWorks: [] as any[]
   })
   const [loadingStats, setLoadingStats] = useState(true)
-  const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [topWorksPage, setTopWorksPage] = useState(1)
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
+  const itemsPerPage = 10
+  const topWorksPerPage = 5
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const isMobile = windowWidth < 768
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,7 +55,6 @@ export default function StatsPage() {
 
   const loadCreatorData = async () => {
     try {
-      // Obtener datos del creador
       const { data: creator } = await supabase
         .from('creators')
         .select('*')
@@ -55,8 +67,6 @@ export default function StatsPage() {
       }
 
       setCreatorData(creator)
-
-      // Obtener estadísticas
       await loadStats(creator.creator_id)
     } catch (error) {
       console.error('Error loading creator data:', error)
@@ -66,13 +76,11 @@ export default function StatsPage() {
   const loadStats = async (creatorId: string) => {
     setLoadingStats(true)
     try {
-      // 1. Visitas al perfil
       const { count: profileVisits } = await supabase
         .from('profile_visits')
         .select('*', { count: 'exact', head: true })
         .eq('creator_id', creatorId)
 
-      // 2. Obras del creador
       const { data: works } = await supabase
         .from('works')
         .select('*')
@@ -81,7 +89,6 @@ export default function StatsPage() {
       const totalWorks = works?.length || 0
       const worksWithPrice = works?.filter(w => w.price && w.price > 0).length || 0
 
-      // 3. Mensajes
       const { count: totalMessages } = await supabase
         .from('contact_messages')
         .select('*', { count: 'exact', head: true })
@@ -93,7 +100,6 @@ export default function StatsPage() {
         .eq('creator_id', creatorId)
         .eq('is_read', false)
 
-      // 4. Ventas
       const { data: purchases } = await supabase
         .from('purchases')
         .select('*')
@@ -104,7 +110,6 @@ export default function StatsPage() {
       const totalRevenue = purchases?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
       const creatorEarnings = totalRevenue * 0.75
 
-      // 5. Estadísticas por obra
       const worksStats = await Promise.all(
         (works || []).map(async (work) => {
           const { count: visits } = await supabase
@@ -124,12 +129,7 @@ export default function StatsPage() {
         })
       )
 
-      // Top obras por visitas
-      const topWorks = [...worksStats]
-        .sort((a, b) => b.visits - a.visits)
-        .slice(0, 5)
-
-      // 6. Visitas mensuales (últimos 12 meses)
+      const topWorks = [...worksStats].sort((a, b) => b.visits - a.visits)
       const monthlyVisits = await loadMonthlyVisits(creatorId)
 
       setStats({
@@ -176,6 +176,28 @@ export default function StatsPage() {
     return months
   }
 
+  const totalPages = Math.ceil(stats.worksStats.length / itemsPerPage)
+  const paginatedWorks = stats.worksStats.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const totalTopWorksPages = Math.ceil(stats.topWorks.length / topWorksPerPage)
+  const paginatedTopWorks = stats.topWorks.slice(
+    (topWorksPage - 1) * topWorksPerPage,
+    topWorksPage * topWorksPerPage
+  )
+
+  const handleTopWorksPageChange = (page: number) => {
+    setTopWorksPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   if (loading || loadingStats) {
     return (
       <div style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
@@ -194,7 +216,7 @@ export default function StatsPage() {
             100% { transform: rotate(360deg); }
           }
         `}</style>
-        <p>Cargando estadísticas...</p>
+        <p>{t.stats?.loading || 'Cargando estadísticas...'}</p>
       </div>
     )
   }
@@ -207,7 +229,7 @@ export default function StatsPage() {
     <div style={{ 
       maxWidth: "1200px", 
       margin: "40px auto", 
-      padding: "0 20px",
+      padding: isMobile ? "0 15px" : "0 20px",
       fontFamily: "sans-serif" 
     }}>
       
@@ -222,13 +244,13 @@ export default function StatsPage() {
       }}>
         <div>
           <h1 style={{ 
-            fontSize: "2rem", 
+            fontSize: isMobile ? "1.8rem" : "2rem", 
             margin: 0,
             background: "linear-gradient(135deg, #4f46e5, #10b981)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent"
           }}>
-            📊 Estadísticas
+            📊 {t.stats?.title || 'Estadísticas'}
           </h1>
           <p style={{ color: '#666', marginTop: '8px' }}>
             {creatorData.full_first_name} {creatorData.full_last_name} • ID: {creatorData.creator_id}
@@ -245,69 +267,76 @@ export default function StatsPage() {
             borderRadius: '4px'
           }}
         >
-          ← Volver al perfil
+          ← {t.stats?.backToProfile || 'Volver al perfil'}
         </Link>
       </div>
 
       {/* Tarjetas de resumen */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '20px',
         marginBottom: '30px'
       }}>
         <StatCard
-          title="Visitas al perfil"
+          title={t.stats?.profileVisits || 'Visitas al perfil'}
           value={stats.profileVisits}
           icon="👁️"
           color="#4f46e5"
+          isMobile={isMobile}
         />
         <StatCard
-          title="Obras registradas"
+          title={t.stats?.registeredWorks || 'Obras registradas'}
           value={stats.totalWorks}
-          subValue={`${stats.worksWithPrice} con precio`}
+          subValue={`${stats.worksWithPrice} ${t.stats?.withPrice || 'con precio'}`}
           icon="🎨"
           color="#10b981"
+          isMobile={isMobile}
         />
         <StatCard
-          title="Mensajes"
+          title={t.stats?.messages || 'Mensajes'}
           value={stats.totalMessages}
-          subValue={`${stats.unreadMessages} no leídos`}
+          subValue={`${stats.unreadMessages} ${t.stats?.unread || 'no leídos'}`}
           icon="📬"
           color="#f59e0b"
+          isMobile={isMobile}
         />
         <StatCard
-          title="Ventas"
+          title={t.stats?.sales || 'Ventas'}
           value={stats.totalSales}
           icon="💰"
           color="#ef4444"
+          isMobile={isMobile}
         />
       </div>
 
       {/* Tarjetas de ingresos */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
         gap: '20px',
         marginBottom: '30px'
       }}>
         <RevenueCard
-          title="Ingresos brutos"
+          title={t.stats?.grossRevenue || 'Ingresos brutos'}
           amount={stats.totalRevenue}
           icon="💵"
           color="#4f46e5"
+          isMobile={isMobile}
         />
         <RevenueCard
-          title="Comisión (25%)"
+          title={t.stats?.commission || 'Comisión (25%)'}
           amount={stats.totalRevenue * 0.25}
           icon="🏦"
           color="#dc2626"
+          isMobile={isMobile}
         />
         <RevenueCard
-          title="Tus ganancias (75%)"
+          title={t.stats?.earnings || 'Tus ganancias (75%)'}
           amount={stats.creatorEarnings}
           icon="💰"
           color="#10b981"
+          isMobile={isMobile}
         />
       </div>
 
@@ -319,11 +348,11 @@ export default function StatsPage() {
         padding: '20px',
         marginBottom: '30px'
       }}>
-        <h2 style={{ marginBottom: '20px' }}>📈 Visitas mensuales</h2>
+        <h2 style={{ marginBottom: '20px', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>📈 {t.stats?.monthlyVisits || 'Visitas mensuales'}</h2>
         <div style={{
           display: 'flex',
           alignItems: 'flex-end',
-          gap: '8px',
+          gap: '4px',
           height: '200px',
           marginTop: '20px'
         }}>
@@ -337,7 +366,7 @@ export default function StatsPage() {
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '4px'
               }}>
                 <div style={{
                   width: '100%',
@@ -347,10 +376,10 @@ export default function StatsPage() {
                   transition: 'height 0.3s',
                   minHeight: month.visits > 0 ? '4px' : '0'
                 }} />
-                <span style={{ fontSize: '0.7rem', color: '#666' }}>
+                <span style={{ fontSize: isMobile ? '0.6rem' : '0.7rem', color: '#666' }}>
                   {month.month}
                 </span>
-                <span style={{ fontSize: '0.7rem', fontWeight: 'bold' }}>
+                <span style={{ fontSize: isMobile ? '0.6rem' : '0.7rem', fontWeight: 'bold' }}>
                   {month.visits}
                 </span>
               </div>
@@ -368,47 +397,62 @@ export default function StatsPage() {
           padding: '20px',
           marginBottom: '30px'
         }}>
-          <h2 style={{ marginBottom: '20px' }}>🏆 Obras más visitadas</h2>
+          <h2 style={{ marginBottom: '20px', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>🏆 {t.stats?.topWorks || 'Obras más visitadas'}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {stats.topWorks.map((work, index) => (
-              <div key={work.id} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px',
-                background: '#f9f9f9',
-                borderRadius: '8px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{
-                    width: '28px',
-                    height: '28px',
-                    background: '#4f46e5',
-                    color: 'white',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold'
-                  }}>
-                    {index + 1}
-                  </span>
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{work.title}</div>
-                    {work.price && (
-                      <div style={{ fontSize: '0.8rem', color: '#4f46e5' }}>${work.price}</div>
+            {paginatedTopWorks.map((work, index) => {
+              const globalIndex = (topWorksPage - 1) * topWorksPerPage + index + 1
+              return (
+                <div key={work.id} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px',
+                  background: '#f9f9f9',
+                  borderRadius: '8px',
+                  flexWrap: 'wrap',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{
+                      width: '28px',
+                      height: '28px',
+                      background: '#4f46e5',
+                      color: 'white',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 'bold',
+                      fontSize: isMobile ? '0.8rem' : '0.9rem'
+                    }}>
+                      {globalIndex}
+                    </span>
+                    <div>
+                      <div style={{ fontWeight: 500, fontSize: isMobile ? '0.9rem' : '1rem' }}>{work.title}</div>
+                      {work.price && (
+                        <div style={{ fontSize: '0.75rem', color: '#4f46e5' }}>${work.price}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontWeight: 'bold', color: '#4f46e5', fontSize: isMobile ? '0.9rem' : '1rem' }}>{work.visits} {t.stats?.visits || 'visitas'}</div>
+                    {work.sales > 0 && (
+                      <div style={{ fontSize: '0.75rem', color: '#10b981' }}>{work.sales} {t.stats?.sales || 'ventas'}</div>
                     )}
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 'bold', color: '#4f46e5' }}>{work.visits} visitas</div>
-                  {work.sales > 0 && (
-                    <div style={{ fontSize: '0.8rem', color: '#10b981' }}>{work.sales} ventas</div>
-                  )}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
+
+          {totalTopWorksPages > 1 && (
+            <Pagination
+              currentPage={topWorksPage}
+              totalPages={totalTopWorksPages}
+              onPageChange={handleTopWorksPageChange}
+              isMobile={isMobile}
+            />
+          )}
         </div>
       )}
 
@@ -419,26 +463,27 @@ export default function StatsPage() {
         borderRadius: '8px',
         padding: '20px'
       }}>
-        <h2 style={{ marginBottom: '20px' }}>📋 Detalle por obra</h2>
+        <h2 style={{ marginBottom: '20px', fontSize: isMobile ? '1.2rem' : '1.5rem' }}>📋 {t.stats?.worksDetail || 'Detalle por obra'}</h2>
+        
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #eaeaea' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Obra</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Visitas</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Ventas</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>Ingresos</th>
-                <th style={{ padding: '12px', textAlign: 'center' }}>Acción</th>
-              </tr>
+                <th style={{ padding: '12px', textAlign: 'left' }}>{t.stats?.work || 'Obra'}</th>
+                <th style={{ padding: '12px', textAlign: 'center' }}>{t.stats?.visits || 'Visitas'}</th>
+                <th style={{ padding: '12px', textAlign: 'center' }}>{t.stats?.sales || 'Ventas'}</th>
+                <th style={{ padding: '12px', textAlign: 'right' }}>{t.stats?.revenue || 'Ingresos'}</th>
+                <th style={{ padding: '12px', textAlign: 'center' }}>{t.stats?.actions || 'Acciones'}</th>
+                </tr>
             </thead>
             <tbody>
-              {stats.worksStats.map((work) => (
+              {paginatedWorks.map((work) => (
                 <tr key={work.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
                   <td style={{ padding: '12px' }}>
                     <div>
-                      <div style={{ fontWeight: 500 }}>{work.title}</div>
+                      <div style={{ fontWeight: 500, fontSize: isMobile ? '0.85rem' : '1rem' }}>{work.title}</div>
                       {work.price && (
-                        <div style={{ fontSize: '0.8rem', color: '#4f46e5' }}>${work.price}</div>
+                        <div style={{ fontSize: '0.7rem', color: '#4f46e5' }}>${work.price}</div>
                       )}
                     </div>
                   </td>
@@ -464,10 +509,10 @@ export default function StatsPage() {
                         color: 'white',
                         textDecoration: 'none',
                         borderRadius: '4px',
-                        fontSize: '0.8rem'
+                        fontSize: isMobile ? '0.7rem' : '0.8rem'
                       }}
                     >
-                      Ver
+                      {t.stats?.view || 'Ver'}
                     </Link>
                   </td>
                 </tr>
@@ -475,12 +520,32 @@ export default function StatsPage() {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            isMobile={isMobile}
+          />
+        )}
+
+        {stats.worksStats.length > itemsPerPage && (
+          <p style={{
+            textAlign: 'center',
+            color: '#666',
+            fontSize: '0.8rem',
+            marginTop: '15px'
+          }}>
+            Mostrando {paginatedWorks.length} de {stats.worksStats.length} {t.stats?.works || 'obras'}
+          </p>
+        )}
       </div>
 
       <style>{`
         @media (max-width: 768px) {
           table {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
           }
           th, td {
             padding: 8px !important;
@@ -492,39 +557,39 @@ export default function StatsPage() {
 }
 
 // Componentes auxiliares
-function StatCard({ title, value, subValue, icon, color }: any) {
+function StatCard({ title, value, subValue, icon, color, isMobile }: any) {
   return (
     <div style={{
       background: 'white',
       border: '1px solid #eaeaea',
       borderRadius: '8px',
-      padding: '20px',
+      padding: isMobile ? '15px' : '20px',
       textAlign: 'center'
     }}>
-      <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{icon}</div>
-      <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color }}>{value}</div>
-      <div style={{ color: '#666', marginTop: '4px' }}>{title}</div>
+      <div style={{ fontSize: isMobile ? '1.5rem' : '2rem', marginBottom: '8px' }}>{icon}</div>
+      <div style={{ fontSize: isMobile ? '1.3rem' : '1.8rem', fontWeight: 'bold', color }}>{value}</div>
+      <div style={{ color: '#666', marginTop: '4px', fontSize: isMobile ? '0.8rem' : '0.9rem' }}>{title}</div>
       {subValue && (
-        <div style={{ fontSize: '0.8rem', color: '#999', marginTop: '8px' }}>{subValue}</div>
+        <div style={{ fontSize: isMobile ? '0.7rem' : '0.8rem', color: '#999', marginTop: '8px' }}>{subValue}</div>
       )}
     </div>
   )
 }
 
-function RevenueCard({ title, amount, icon, color }: any) {
+function RevenueCard({ title, amount, icon, color, isMobile }: any) {
   return (
     <div style={{
       background: 'white',
       border: '1px solid #eaeaea',
       borderRadius: '8px',
-      padding: '20px',
+      padding: isMobile ? '15px' : '20px',
       textAlign: 'center'
     }}>
-      <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{icon}</div>
-      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color }}>
+      <div style={{ fontSize: isMobile ? '1.5rem' : '2rem', marginBottom: '8px' }}>{icon}</div>
+      <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 'bold', color }}>
         ${amount.toFixed(2)}
       </div>
-      <div style={{ color: '#666', marginTop: '4px' }}>{title}</div>
+      <div style={{ color: '#666', marginTop: '4px', fontSize: isMobile ? '0.8rem' : '0.9rem' }}>{title}</div>
     </div>
   )
 }

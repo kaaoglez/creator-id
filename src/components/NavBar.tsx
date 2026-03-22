@@ -17,6 +17,7 @@ export default function NavBar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
   const { user } = useAuth();
   const { t, language, changeLanguage } = useLanguage();
@@ -46,6 +47,7 @@ export default function NavBar() {
     }
   }, [user]);
 
+  // Cerrar menú de usuario al hacer clic fuera
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -55,6 +57,17 @@ export default function NavBar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Cerrar menú móvil al hacer clic fuera
+  useEffect(() => {
+    function handleClickOutsideMobile(event: MouseEvent) {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node) && menuOpen) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutsideMobile);
+    return () => document.removeEventListener('mousedown', handleClickOutsideMobile);
+  }, [menuOpen]);
 
   async function checkCreatorStatus() {
     const { data } = await supabase
@@ -96,6 +109,10 @@ export default function NavBar() {
     return pathname.startsWith(path);
   };
 
+  const toggleMobileMenu = () => {
+    setMenuOpen(!menuOpen);
+  };
+
   return (
     <nav style={{
       position: 'fixed',
@@ -109,7 +126,7 @@ export default function NavBar() {
         : 'linear-gradient(135deg, #4f46e5, #10b981)',
       backdropFilter: scrolled ? 'blur(10px)' : 'none',
       boxShadow: scrolled ? '0 4px 20px rgba(0,0,0,0.1)' : 'none',
-      padding: '0.8rem 1rem', // Reducido padding en móviles
+      padding: '0.8rem 1rem',
     }}>
       <div style={{
         maxWidth: '1200px',
@@ -119,66 +136,60 @@ export default function NavBar() {
         alignItems: 'center',
       }}>
         
-        {/* Logo - más pequeño en móviles */}
+        {/* Logo */}
         <Link href="/" style={{
           color: scrolled ? '#4f46e5' : 'white',
           textDecoration: 'none',
-          fontSize: 'clamp(1.2rem, 5vw, 1.8rem)', // Responsive
+          fontSize: 'clamp(1.2rem, 5vw, 1.8rem)',
           fontWeight: 'bold',
           transition: 'color 0.3s ease',
         }}>
           Creator-ID
         </Link>
 
-        {/* Desktop Menu - Enlaces públicos siempre visibles */}
-<div style={{ 
-  display: 'flex', 
-  gap: '0.5rem', 
-  alignItems: 'center',
-}} className="desktop-menu">
-  
-  {/* Enlaces públicos - siempre visibles */}
-  <NavLink href="/" isActive={isActive('/')} scrolled={scrolled}>
-    {t.nav.home}
-  </NavLink>
-  
-  <NavLink href="/shop" isActive={isActive('/shop')} scrolled={scrolled}>
-    🛍️ {t.nav.shop || 'Tienda'}
-  </NavLink>
-  
-  <NavLink href="/search" isActive={isActive('/search')} scrolled={scrolled}>
-    {t.nav.search}
-  </NavLink>
-  
-  <NavLink href="/verify" isActive={isActive('/verify')} scrolled={scrolled}>
-    {t.nav.verify}
-  </NavLink>
-  
-  {/* Enlaces que requieren usuario */}
-  {user && (
-    <>
-      {hasCreatorId && (
-        <NavLink href="/works/new" isActive={isActive('/works/new')} scrolled={scrolled}>
-          {t.nav.registerWork}
-        </NavLink>
-      )}
-    </>
-  )}
-</div>
+        {/* Desktop Menu */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '0.5rem', 
+          alignItems: 'center',
+        }} className="desktop-menu">
+          
+          <NavLink href="/" isActive={isActive('/')} scrolled={scrolled}>
+            {t.nav.home}
+          </NavLink>
+          
+          <NavLink href="/shop" isActive={isActive('/shop')} scrolled={scrolled}>
+            🛍️ {t.nav.shop || 'Tienda'}
+          </NavLink>
+          
+          <NavLink href="/search" isActive={isActive('/search')} scrolled={scrolled}>
+            {t.nav.search}
+          </NavLink>
+          
+          <NavLink href="/verify" isActive={isActive('/verify')} scrolled={scrolled}>
+            {t.nav.verify}
+          </NavLink>
+          
+          {user && hasCreatorId && (
+            <NavLink href="/works/new" isActive={isActive('/works/new')} scrolled={scrolled}>
+              {t.nav.registerWork}
+            </NavLink>
+          )}
+        </div>
 
         {/* Right section */}
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '0.5rem', // Reducido gap en móviles
+          gap: '0.5rem',
         }}>
           
-          {/* Language selector - más compacto en móviles */}
+          {/* Language selector */}
           <div style={{ display: 'flex', gap: '2px' }}>
             <button
               onClick={() => changeLanguage('es')}
               style={{
-                padding: '4px 6px', // Reducido padding
+                padding: '4px 6px',
                 background: language === 'es' 
                   ? (scrolled ? '#4f46e5' : 'rgba(255,255,255,0.3)')
                   : (scrolled ? '#eaeaea' : 'rgba(255,255,255,0.1)'),
@@ -187,8 +198,9 @@ export default function NavBar() {
                   : (scrolled ? '#333' : 'rgba(255,255,255,0.8)'),
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '0.8rem', // Más pequeño
-                fontWeight: language === 'es' ? 'bold' : 'normal'
+                fontSize: '0.8rem',
+                fontWeight: language === 'es' ? 'bold' : 'normal',
+                borderRadius: '4px'
               }}
             >
               ES
@@ -206,14 +218,15 @@ export default function NavBar() {
                 border: 'none',
                 cursor: 'pointer',
                 fontSize: '0.8rem',
-                fontWeight: language === 'en' ? 'bold' : 'normal'
+                fontWeight: language === 'en' ? 'bold' : 'normal',
+                borderRadius: '4px'
               }}
             >
               EN
             </button>
           </div>
 
-          {/* Indicador de perfil incompleto - versión móvil más compacta */}
+          {/* Perfil incompleto badge */}
           {user && !hasCreatorId && (
             <Link
               href="/register"
@@ -222,10 +235,10 @@ export default function NavBar() {
                 background: '#fbbf24',
                 color: '#1f2937',
                 textDecoration: 'none',
-                fontSize: '0.7rem', // Más pequeño
+                fontSize: '0.7rem',
                 fontWeight: 'bold',
                 whiteSpace: 'nowrap',
-                transition: 'all 0.2s'
+                borderRadius: '4px'
               }}
             >
               ⚡
@@ -252,7 +265,7 @@ export default function NavBar() {
                     ? (scrolled ? 'rgba(79, 70, 229, 0.1)' : 'rgba(255,255,255,0.2)')
                     : (scrolled ? 'transparent' : 'rgba(255,255,255,0.1)'),
                   border: scrolled ? '1px solid #eaeaea' : '1px solid rgba(255,255,255,0.2)',
-                  padding: '0.4rem 0.8rem', // Reducido padding
+                  padding: '0.4rem 0.8rem',
                   color: scrolled ? '#1f2937' : 'white',
                   cursor: 'pointer',
                   display: 'flex',
@@ -260,7 +273,8 @@ export default function NavBar() {
                   gap: '4px',
                   transition: 'all 0.2s',
                   fontWeight: 500,
-                  fontSize: '0.85rem', // Más pequeño
+                  fontSize: '0.85rem',
+                  borderRadius: '8px'
                 }}
               >
                 <span style={{ fontSize: '1rem' }}>👤</span>
@@ -272,7 +286,6 @@ export default function NavBar() {
                 }}>▼</span>
               </button>
 
-              {/* Menú desplegable - mismo ancho en móvil */}
               {userMenuOpen && (
                 <div style={{
                   position: 'absolute',
@@ -281,9 +294,10 @@ export default function NavBar() {
                   marginTop: '8px',
                   background: 'white',
                   boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-                  minWidth: '180px',
+                  minWidth: '200px',
                   overflow: 'hidden',
                   border: '1px solid #eaeaea',
+                  borderRadius: '8px',
                   zIndex: 1000
                 }}>
                   <DropdownItem 
@@ -293,6 +307,15 @@ export default function NavBar() {
                   >
                     {t.nav.profile}
                   </DropdownItem>
+                  
+                  <DropdownItem 
+                    href="/stats" 
+                    icon="📊"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    {t.nav?.stats || 'Estadísticas'}
+                  </DropdownItem>
+                  
                   <DropdownItem 
                     href="/messages" 
                     icon="📬" 
@@ -301,6 +324,7 @@ export default function NavBar() {
                   >
                     {t.nav.messages}
                   </DropdownItem>
+                  
                   {creatorId && (
                     <DropdownItem 
                       href={`/${creatorId}`} 
@@ -310,7 +334,9 @@ export default function NavBar() {
                       {t.nav.publicProfile}
                     </DropdownItem>
                   )}
+                  
                   <div style={{ height: '1px', background: '#eaeaea', margin: '4px 0' }} />
+                  
                   <button
                     onClick={handleLogout}
                     style={{
@@ -322,16 +348,17 @@ export default function NavBar() {
                       background: 'none',
                       border: 'none',
                       color: '#ef4444',
-                      fontSize: '0.9rem',
+                      fontSize: '0.95rem',
                       fontWeight: 500,
                       cursor: 'pointer',
                       transition: 'background 0.2s',
-                      textAlign: 'left'
+                      textAlign: 'left',
+                      borderRadius: '0 0 8px 8px'
                     }}
                     onMouseOver={(e) => e.currentTarget.style.background = '#fef2f2'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'white'}
                   >
-                    <span style={{ fontSize: '1rem' }}>🔒</span>
+                    <span style={{ fontSize: '1.1rem' }}>🔒</span>
                     {t.nav.logout}
                   </button>
                 </div>
@@ -339,9 +366,9 @@ export default function NavBar() {
             </div>
           )}
 
-          {/* Mobile menu button - siempre visible en móviles */}
+          {/* Mobile menu button */}
           <button 
-            onClick={() => setMenuOpen(!menuOpen)}
+            onClick={toggleMobileMenu}
             style={{
               display: 'block',
               background: 'none',
@@ -350,77 +377,56 @@ export default function NavBar() {
               fontSize: '1.8rem',
               cursor: 'pointer',
               padding: '0.3rem',
-              lineHeight: '1'
+              lineHeight: '1',
+              minWidth: '44px',
+              minHeight: '44px'
             }}
             className="mobile-menu-button"
+            aria-label="Menú"
           >
             {menuOpen ? '✕' : '☰'}
           </button>
         </div>
       </div>
 
-       {/* Mobile menu */}
-{menuOpen && (
-  <div style={{
-    position: 'fixed',
-    top: '60px',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'white',
-    padding: '20px',
-    overflowY: 'auto',
-    zIndex: 999,
-    animation: 'slideIn 0.3s ease'
-  }}>
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px'
-    }}>
-      {/* Enlaces públicos - siempre visibles */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{
-          padding: '8px 0',
-          color: '#666',
-          fontSize: '0.7rem',
-          textTransform: 'uppercase',
-          letterSpacing: '1px'
-        }}>
-          Principal
-        </div>
-        <MobileLink href="/" onClick={() => setMenuOpen(false)}>
-          🏠 Inicio
-        </MobileLink>
-        <MobileLink href="/shop" onClick={() => setMenuOpen(false)}>
-          🛍️ Tienda
-        </MobileLink>
-        <MobileLink href="/faq" onClick={() => setMenuOpen(false)}>
-          ❓ Ayuda / FAQ
-        </MobileLink>
-      </div>
-
-      {/* Enlaces de exploración */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{
-          padding: '8px 0',
-          color: '#666',
-          fontSize: '0.7rem',
-          textTransform: 'uppercase',
-          letterSpacing: '1px'
-        }}>
-          Explorar
-        </div>
-        <MobileLink href="/search" onClick={() => setMenuOpen(false)}>
-          🔍 Buscar
-        </MobileLink>
-        <MobileLink href="/verify" onClick={() => setMenuOpen(false)}>
-          ✅ Verificar
-        </MobileLink>
-      </div>
-
-            {/* Enlaces de usuario (no autenticado) */}
-            {!user && (
+      {/* Mobile menu */}
+      {menuOpen && (
+        <>
+          <div 
+            onClick={() => setMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              top: '60px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 998,
+              animation: 'fadeIn 0.3s ease'
+            }}
+          />
+          
+          <div 
+            ref={mobileMenuRef}
+            style={{
+              position: 'fixed',
+              top: '60px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'white',
+              padding: '20px',
+              overflowY: 'auto',
+              zIndex: 999,
+              animation: 'slideIn 0.3s ease'
+            }}
+          >
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              {/* Enlaces públicos */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{
                   padding: '8px 0',
@@ -429,20 +435,40 @@ export default function NavBar() {
                   textTransform: 'uppercase',
                   letterSpacing: '1px'
                 }}>
-                  Acceso
+                  Principal
                 </div>
-                <MobileLink href="/auth/register" onClick={() => setMenuOpen(false)}>
-                  📝 Registrarse
+                <MobileLink href="/" onClick={() => setMenuOpen(false)}>
+                  🏠 Inicio
                 </MobileLink>
-                <MobileLink href="/auth/login" onClick={() => setMenuOpen(false)}>
-                  🔑 Iniciar sesión
+                <MobileLink href="/shop" onClick={() => setMenuOpen(false)}>
+                  🛍️ Tienda
+                </MobileLink>
+                <MobileLink href="/faq" onClick={() => setMenuOpen(false)}>
+                  ❓ Ayuda / FAQ
                 </MobileLink>
               </div>
-            )}
 
-            {/* Enlaces de creador */}
-            {user && (
-              <>
+              {/* Exploración */}
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{
+                  padding: '8px 0',
+                  color: '#666',
+                  fontSize: '0.7rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>
+                  Explorar
+                </div>
+                <MobileLink href="/search" onClick={() => setMenuOpen(false)}>
+                  🔍 Buscar
+                </MobileLink>
+                <MobileLink href="/verify" onClick={() => setMenuOpen(false)}>
+                  ✅ Verificar
+                </MobileLink>
+              </div>
+
+              {/* Usuario no autenticado */}
+              {!user && (
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{
                     padding: '8px 0',
@@ -451,158 +477,175 @@ export default function NavBar() {
                     textTransform: 'uppercase',
                     letterSpacing: '1px'
                   }}>
-                    Mi cuenta
+                    Acceso
                   </div>
-                  
-                  {/* Info del usuario */}
-                  <div style={{
-                    padding: '12px 16px',
-                    background: '#f3f4f6',
-                    marginBottom: '8px',
-                    borderRadius: '8px'
-                  }}>
-                    <div style={{ fontWeight: 'bold' }}>{creatorName || 'Usuario'}</div>
-                    {creatorId && <div style={{ fontSize: '0.7rem', color: '#666' }}>ID: {creatorId}</div>}
-                  </div>
-
-                  {/* Enlaces del perfil */}
-                  <MobileLink href="/profile" onClick={() => setMenuOpen(false)}>
-                    👤 Mi Perfil
+                  <MobileLink href="/auth/register" onClick={() => setMenuOpen(false)}>
+                    📝 Registrarse
                   </MobileLink>
-                  <MobileLink href="/profile/edit" onClick={() => setMenuOpen(false)}>
-                    ✏️ Editar Perfil
+                  <MobileLink href="/auth/login" onClick={() => setMenuOpen(false)}>
+                    🔑 Iniciar sesión
                   </MobileLink>
-                  <MobileLink href="/messages" onClick={() => setMenuOpen(false)}>
-                    📬 Mensajes {unreadCount > 0 && `(${unreadCount})`}
-                  </MobileLink>
-                  <MobileLink href="/stats" onClick={() => setMenuOpen(false)}>
-                    📊 Estadísticas
-                  </MobileLink>
-                  
-                  {/* Enlaces de obras */}
-                  {hasCreatorId && (
-                    <MobileLink href="/works/new" onClick={() => setMenuOpen(false)}>
-                      ➕ Registrar obra
-                    </MobileLink>
-                  )}
-                  
-                  {/* Perfil público */}
-                  {creatorId && (
-                    <MobileLink href={`/${creatorId}`} onClick={() => setMenuOpen(false)}>
-                      🌐 Perfil público
-                    </MobileLink>
-                  )}
-                  
-                  {/* Botón cerrar sesión */}
-                  <button
-                    onClick={handleLogout}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      width: '100%',
-                      padding: '12px 16px',
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      border: 'none',
-                      fontSize: '1rem',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      borderRadius: '8px',
-                      marginTop: '8px'
-                    }}
-                  >
-                    🔒 Cerrar sesión
-                  </button>
                 </div>
+              )}
 
-                {/* Indicador de perfil incompleto */}
-                {!hasCreatorId && (
-                  <div style={{
-                    padding: '12px 16px',
-                    background: '#fef3c7',
-                    borderRadius: '8px',
-                    marginBottom: '16px'
-                  }}>
-                    <div style={{ fontWeight: 'bold', color: '#92400e' }}>⚠️ Perfil incompleto</div>
-                    <div style={{ fontSize: '0.8rem', color: '#b45309' }}>Completa tu registro para publicar obras</div>
-                    <Link
-                      href="/register"
-                      onClick={() => setMenuOpen(false)}
+              {/* Usuario autenticado */}
+              {user && (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{
+                      padding: '8px 0',
+                      color: '#666',
+                      fontSize: '0.7rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>
+                      Mi cuenta
+                    </div>
+                    
+                    <div style={{
+                      padding: '12px 16px',
+                      background: '#f3f4f6',
+                      marginBottom: '8px',
+                      borderRadius: '8px'
+                    }}>
+                      <div style={{ fontWeight: 'bold' }}>{creatorName || 'Usuario'}</div>
+                      {creatorId && <div style={{ fontSize: '0.7rem', color: '#666' }}>ID: {creatorId}</div>}
+                    </div>
+
+                    <MobileLink href="/profile" onClick={() => setMenuOpen(false)}>
+                      👤 Mi Perfil
+                    </MobileLink>
+                    <MobileLink href="/profile/edit" onClick={() => setMenuOpen(false)}>
+                      ✏️ Editar Perfil
+                    </MobileLink>
+                    <MobileLink href="/messages" onClick={() => setMenuOpen(false)}>
+                      📬 Mensajes {unreadCount > 0 && `(${unreadCount})`}
+                    </MobileLink>
+                    <MobileLink href="/stats" onClick={() => setMenuOpen(false)}>
+                      📊 Estadísticas
+                    </MobileLink>
+                    
+                    {hasCreatorId && (
+                      <MobileLink href="/works/new" onClick={() => setMenuOpen(false)}>
+                        ➕ Registrar obra
+                      </MobileLink>
+                    )}
+                    
+                    {creatorId && (
+                      <MobileLink href={`/${creatorId}`} onClick={() => setMenuOpen(false)}>
+                        🌐 Perfil público
+                      </MobileLink>
+                    )}
+                    
+                    <button
+                      onClick={handleLogout}
                       style={{
-                        display: 'inline-block',
-                        marginTop: '8px',
-                        padding: '6px 12px',
-                        background: '#f59e0b',
-                        color: 'white',
-                        textDecoration: 'none',
-                        borderRadius: '4px',
-                        fontSize: '0.8rem'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        border: 'none',
+                        fontSize: '1rem',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        borderRadius: '8px',
+                        marginTop: '8px'
                       }}
                     >
-                      Completar perfil
-                    </Link>
+                      🔒 Cerrar sesión
+                    </button>
                   </div>
-                )}
-              </>
-            )}
 
-            {/* Selector de idioma */}
-            <div style={{
-              borderTop: '1px solid #eaeaea',
-              paddingTop: '16px',
-              marginTop: '8px'
-            }}>
+                  {!hasCreatorId && (
+                    <div style={{
+                      padding: '12px 16px',
+                      background: '#fef3c7',
+                      borderRadius: '8px',
+                      marginBottom: '16px'
+                    }}>
+                      <div style={{ fontWeight: 'bold', color: '#92400e' }}>⚠️ Perfil incompleto</div>
+                      <div style={{ fontSize: '0.8rem', color: '#b45309' }}>Completa tu registro para publicar obras</div>
+                      <Link
+                        href="/register"
+                        onClick={() => setMenuOpen(false)}
+                        style={{
+                          display: 'inline-block',
+                          marginTop: '8px',
+                          padding: '6px 12px',
+                          background: '#f59e0b',
+                          color: 'white',
+                          textDecoration: 'none',
+                          borderRadius: '4px',
+                          fontSize: '0.8rem'
+                        }}
+                      >
+                        Completar perfil
+                      </Link>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Selector de idioma */}
               <div style={{
-                padding: '8px 0',
-                color: '#666',
-                fontSize: '0.7rem',
-                textTransform: 'uppercase',
-                letterSpacing: '1px'
+                borderTop: '1px solid #eaeaea',
+                paddingTop: '16px',
+                marginTop: '8px'
               }}>
-                Idioma
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => {
-                    changeLanguage('es');
-                    setMenuOpen(false);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    background: language === 'es' ? '#4f46e5' : '#f3f4f6',
-                    color: language === 'es' ? 'white' : '#333',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: language === 'es' ? 'bold' : 'normal',
-                    borderRadius: '8px'
-                  }}
-                >
-                  🇪🇸 Español
-                </button>
-                <button
-                  onClick={() => {
-                    changeLanguage('en');
-                    setMenuOpen(false);
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '10px',
-                    background: language === 'en' ? '#4f46e5' : '#f3f4f6',
-                    color: language === 'en' ? 'white' : '#333',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: language === 'en' ? 'bold' : 'normal',
-                    borderRadius: '8px'
-                  }}
-                >
-                  🇬🇧 English
-                </button>
+                <div style={{
+                  padding: '8px 0',
+                  color: '#666',
+                  fontSize: '0.7rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>
+                  Idioma
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => {
+                      changeLanguage('es');
+                      setMenuOpen(false);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      background: language === 'es' ? '#4f46e5' : '#f3f4f6',
+                      color: language === 'es' ? 'white' : '#333',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: language === 'es' ? 'bold' : 'normal',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    🇪🇸 Español
+                  </button>
+                  <button
+                    onClick={() => {
+                      changeLanguage('en');
+                      setMenuOpen(false);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      background: language === 'en' ? '#4f46e5' : '#f3f4f6',
+                      color: language === 'en' ? 'white' : '#333',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: language === 'en' ? 'bold' : 'normal',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    🇬🇧 English
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       <style>{`
@@ -627,11 +670,19 @@ export default function NavBar() {
         }
         @keyframes slideIn {
           from {
-            transform: translateY(-10px);
+            transform: translateX(100%);
             opacity: 0;
           }
           to {
-            transform: translateY(0);
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
             opacity: 1;
           }
         }
@@ -640,7 +691,7 @@ export default function NavBar() {
   );
 }
 
-// Componentes auxiliares (sin cambios)
+// Componentes auxiliares
 function NavLink({ href, children, isActive, scrolled }: any) {
   return (
     <Link
@@ -654,6 +705,7 @@ function NavLink({ href, children, isActive, scrolled }: any) {
         fontWeight: isActive ? 600 : 400,
         transition: 'all 0.2s',
         background: isActive && !scrolled ? 'rgba(255,255,255,0.1)' : 'none',
+        borderRadius: '8px'
       }}
       onMouseOver={(e) => {
         if (!isActive) {
@@ -702,6 +754,7 @@ function DropdownItem({ href, icon, children, badge, onClick }: any) {
           fontSize: '0.7rem',
           padding: '2px 6px',
           fontWeight: 600,
+          borderRadius: '12px'
         }}>
           {badge}
         </span>
