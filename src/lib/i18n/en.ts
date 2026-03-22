@@ -143,7 +143,8 @@ export const en = {
     checkoutInfo: "Complete your information to continue",
     name: "Full name",
     confirm: "Confirm purchase",
-    securePayment: "Secure payment with Stripe"
+    securePayment: "Secure payment with Stripe",
+    buy: "Buy for"
   },
   works: {
     register: "Register new work",
@@ -192,7 +193,8 @@ export const en = {
     markAsRead: "Mark as read",
     delete: "Delete",
     error: "Error loading messages",
-    confirmDelete: "Delete this message?"
+    confirmDelete: "Delete this message?",
+    purchaseSuccess: "✅ Purchase successful!"
   },
   auth: {
     createAccount: "Create your account",
@@ -302,5 +304,33 @@ export const en = {
   next: "Next",
   showing: "Showing",
   of: "of"
+},
+royalty: {
+  title: "💰 Royalty System",
+  firstSale: "First sale",
+  firstSaleDesc: "the creator receives 90% of the price",
+  resale: "Future resales",
+  resaleDesc: "the original creator receives 20% (perpetual royalty)",
+  seller: "Resellers",
+  sellerDesc: "earn 70% of each resale",
+  platform: "Platform",
+  platformDesc: "only 10% for maintenance"
+},
+purchase: {
+  title: "Purchase work",
+  price: "Price",
+  distribution: "💰 Payment distribution",
+  creator: "Creator",
+  platform: "Platform",
+  seller: "Current seller",
+  originalCreator: "Original creator",
+  didYouKnow: "Did you know?",
+  firstSaleInfo: "The creator receives 90% of this sale. In future resales, they will continue to earn 20% of each transaction.",
+  resaleInfo: "The original creator continues to receive royalties for every future resale. Their income is perpetual!",
+  processing: "Processing...",
+  confirm: "Confirm purchase for",
+  cancel: "Cancel",
+  loading: "Loading...",
+  error: "Error processing payment"
 }
 }

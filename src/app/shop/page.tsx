@@ -1,23 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
+import { useWorks } from '@/hooks/useWorks'
 import { useLanguage } from '@/contexts/LanguageContext'
 import Pagination from '@/components/Pagination'
 import Link from 'next/link'
-import ContactModal from '@/components/ContactModal'
+import WorkCard from '@/components/WorkCard'
 
 export default function ShopPage() {
   const { t } = useLanguage()
   const [currentPage, setCurrentPage] = useState(1)
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200)
-  const [selectedCreator, setSelectedCreator] = useState<{ id: string; name: string; email: string } | null>(null)
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false)
-  const itemsPerPage = 12 // 12 obras por página (4 filas de 3)
-  const supabase = createClient()
+  const itemsPerPage = 12
+  const { data: works = [], isLoading, error } = useWorks()
 
-  // Detectar tamaño de pantalla para responsive
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth)
     window.addEventListener('resize', handleResize)
@@ -25,32 +21,6 @@ export default function ShopPage() {
   }, [])
 
   const isMobile = windowWidth < 768
-
-  // Query para obtener todas las obras (con datos del creador)
-  const { data: works = [], isLoading, error } = useQuery({
-    queryKey: ['shop-works'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('works')
-        .select(`
-          *,
-          creators (
-            full_first_name,
-            full_last_name,
-            avatar_url,
-            creator_id,
-            email
-          )
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return data || []
-    },
-    staleTime: 5 * 60 * 1000,
-  })
-
-  // Paginación
   const totalPages = Math.ceil(works.length / itemsPerPage)
   const paginatedWorks = works.slice(
     (currentPage - 1) * itemsPerPage,
@@ -60,19 +30,6 @@ export default function ShopPage() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleContactClick = (creator: any) => {
-    const fullName = creator.full_first_name && creator.full_last_name
-      ? `${creator.full_first_name} ${creator.full_last_name}`
-      : creator.full_first_name || 'Creador'
-    
-    setSelectedCreator({
-      id: creator.creator_id,
-      name: fullName,
-      email: creator.email
-    })
-    setIsContactModalOpen(true)
   }
 
   if (isLoading) {
@@ -87,20 +44,14 @@ export default function ShopPage() {
           animation: 'spin 1s linear infinite',
           margin: '20px auto'
         }} />
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-        <p>{t.search?.searching || 'Cargando obras...'}</p>
+        <p>Cargando obras...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div style={{ maxWidth: '600px', margin: '40px auto', textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', padding: '40px' }}>
         <p style={{ color: '#dc2626' }}>Error al cargar las obras</p>
         <button onClick={() => window.location.reload()}>Reintentar</button>
       </div>
@@ -138,7 +89,7 @@ export default function ShopPage() {
           padding: '8px 16px',
           color: '#4f46e5',
           fontWeight: 'bold',
-          borderRadius: '4px'
+          borderRadius: '0'
         }}>
           {works.length} {t.shop?.available || 'obras disponibles'}
         </div>
@@ -150,7 +101,7 @@ export default function ShopPage() {
           textAlign: 'center',
           padding: '60px 20px',
           background: '#f9f9f9',
-          borderRadius: '8px'
+          borderRadius: '0'
         }}>
           <p style={{ fontSize: '1.2rem', color: '#666' }}>
             {t.shop?.empty || 'No hay obras registradas aún.'}
@@ -165,7 +116,7 @@ export default function ShopPage() {
               color: 'white',
               textDecoration: 'none',
               fontWeight: 'bold',
-              borderRadius: '4px'
+              borderRadius: '0'
             }}
           >
             {t.shop?.first || 'Registrar primera obra'}
@@ -180,173 +131,12 @@ export default function ShopPage() {
             marginBottom: '30px'
           }}>
             {paginatedWorks.map((work) => (
-              <div key={work.id} style={{
-                background: 'white',
-                border: '1px solid #eaeaea',
-                borderRadius: '8px',
-                overflow: 'hidden',
-                transition: 'all 0.2s',
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%'
-              }}>
-                {/* Imagen */}
-                <div style={{
-                  height: '180px',
-                  background: '#f5f5f5',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}>
-                  {work.file_url && work.file_type?.startsWith('image/') ? (
-                    <img
-                      src={work.file_url}
-                      alt={work.title}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-                      color: 'white',
-                      fontSize: '3rem'
-                    }}>
-                      🎨
-                    </div>
-                  )}
-                </div>
-
-                {/* Contenido */}
-                <div style={{ padding: '15px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h3 style={{
-                    fontSize: '1.1rem',
-                    margin: '0 0 8px 0',
-                    color: '#333',
-                    fontWeight: 600,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}>
-                    {work.title}
-                  </h3>
-
-                  {/* Precio */}
-                  {work.price && (
-                    <div style={{
-                      fontSize: '1.3rem',
-                      fontWeight: 'bold',
-                      color: '#4f46e5',
-                      marginBottom: '8px'
-                    }}>
-                      ${typeof work.price === 'number' ? work.price.toFixed(2) : work.price}
-                    </div>
-                  )}
-
-                  {/* Descripción corta */}
-                  {work.description && (
-                    <p style={{
-                      fontSize: '0.85rem',
-                      color: '#666',
-                      marginBottom: '12px',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
-                      {work.description.length > 80 ? work.description.substring(0, 80) + '...' : work.description}
-                    </p>
-                  )}
-
-                  {/* Creador */}
-                  {work.creators && (
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      marginBottom: '12px',
-                      paddingTop: '8px',
-                      borderTop: '1px solid #f0f0f0'
-                    }}>
-                      {work.creators.avatar_url ? (
-                        <img
-                          src={work.creators.avatar_url}
-                          alt={work.creators.full_first_name}
-                          style={{
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '50%',
-                            objectFit: 'cover'
-                          }}
-                        />
-                      ) : (
-                        <div style={{
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #4f46e5, #10b981)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '0.8rem'
-                        }}>
-                          {work.creators.full_first_name?.charAt(0) || '👤'}
-                        </div>
-                      )}
-                      <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                        {work.creators.full_first_name} {work.creators.full_last_name}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Botones */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '8px',
-                    marginTop: 'auto'
-                  }}>
-                    <Link
-                      href={`/work/${work.id}`}
-                      style={{
-                        flex: 1,
-                        padding: '8px',
-                        background: '#4f46e5',
-                        color: 'white',
-                        textDecoration: 'none',
-                        textAlign: 'center',
-                        fontSize: '0.85rem',
-                        borderRadius: '4px'
-                      }}
-                    >
-                      {t.shop?.details || 'Ver detalles'}
-                    </Link>
-                    {work.creators && (
-                      <button
-                        onClick={() => handleContactClick(work.creators)}
-                        style={{
-                          flex: 1,
-                          padding: '8px',
-                          background: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: '0.85rem',
-                          borderRadius: '4px'
-                        }}
-                      >
-                        📧 {t.shop?.contact || 'Contactar'}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <WorkCard
+                key={work.id}
+                work={work}
+                showActions={false}
+                t={t}
+              />
             ))}
           </div>
 
@@ -370,20 +160,6 @@ export default function ShopPage() {
             Mostrando {paginatedWorks.length} de {works.length} obras
           </p>
         </>
-      )}
-
-      {/* Modal de contacto */}
-      {selectedCreator && (
-        <ContactModal
-          creatorId={selectedCreator.id}
-          creatorName={selectedCreator.name}
-          creatorEmail={selectedCreator.email}
-          isOpen={isContactModalOpen}
-          onClose={() => {
-            setIsContactModalOpen(false)
-            setSelectedCreator(null)
-          }}
-        />
       )}
     </div>
   )

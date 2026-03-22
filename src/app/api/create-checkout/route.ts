@@ -1,37 +1,14 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@/lib/supabase/server'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-02-24.acacia',
+})
 
 export async function POST(req: Request) {
   try {
-    const { workId, buyerName, buyerEmail, successUrl, cancelUrl } = await req.json()
+    const { workId, workTitle, price, creatorId, creatorName } = await req.json()
 
-    if (!workId || !buyerName || !buyerEmail) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
-    }
-
-    // Obtener datos de la obra
-    const supabase = await createClient()
-    const { data: work, error } = await supabase
-      .from('works')
-      .select('*, creators(email)')
-      .eq('id', workId)
-      .single()
-
-    if (error || !work) {
-      console.error('Error fetching work:', error)
-      return NextResponse.json(
-        { error: 'Work not found' },
-        { status: 404 }
-      )
-    }
-
-    // Crear sesión de Stripe Checkout
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -39,44 +16,26 @@ export async function POST(req: Request) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: work.title,
-              description: work.description || 'Obra digital',
-              images: work.file_url ? [work.file_url] : [],
+              name: workTitle,
+              description: `Obra de ${creatorName}`,
             },
-            unit_amount: Math.round(work.price * 100), // Stripe usa centavos
+            unit_amount: Math.round(price * 100),
           },
           quantity: 1,
         },
       ],
       mode: 'payment',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      customer_email: buyerEmail,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/work/${workId}?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/work/${workId}?canceled=true`,
       metadata: {
-        work_id: work.id.toString(),
-        creator_id: work.creator_id,
-        buyer_name: buyerName,
+        workId,
+        creatorId,
       },
     })
 
-    // Crear registro de compra en estado 'pending'
-    await supabase
-      .from('purchases')
-      .insert({
-        work_id: work.id,
-        buyer_name: buyerName,
-        buyer_email: buyerEmail,
-        amount: work.price,
-        status: 'pending',
-        stripe_session_id: session.id,
-      })
-
-    return NextResponse.json({ sessionId: session.id, url: session.url })
-  } catch (error) {
-    console.error('Error creating checkout session:', error)
-    return NextResponse.json(
-      { error: 'Error al crear la sesión de pago' },
-      { status: 500 }
-    )
+    return NextResponse.json({ url: session.url })
+  } catch (err) {
+    console.error('Error creating checkout session:', err)
+    return NextResponse.json({ error: 'Error creating checkout session' }, { status: 500 })
   }
 }

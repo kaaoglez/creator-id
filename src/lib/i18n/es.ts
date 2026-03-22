@@ -143,7 +143,8 @@ export const es = {
     checkoutInfo: "Completa tus datos para continuar",
     name: "Nombre completo",
     confirm: "Confirmar compra",
-    securePayment: "Pago seguro con Stripe"
+    securePayment: "Pago seguro con Stripe",
+    buy: "Comprar por"
   },
   works: {
     register: "Registrar nueva obra",
@@ -192,7 +193,8 @@ export const es = {
     markAsRead: "Marcar como leído",
     delete: "Eliminar",
     error: "Error al cargar los mensajes",
-    confirmDelete: "¿Eliminar este mensaje?"
+    confirmDelete: "¿Eliminar este mensaje?",
+    purchaseSuccess: "✅ Compra realizada con éxito"
   },
   auth: {
     createAccount: "Crear tu cuenta",
@@ -302,5 +304,34 @@ export const es = {
   next: "Siguiente",
   showing: "Mostrando",
   of: "de"
-}
+},
+royalty: {
+  title: "💰 Sistema de regalías",
+  firstSale: "Primera venta",
+  firstSaleDesc: "el creador recibe el 90% del precio",
+  resale: "Reventas futuras",
+  resaleDesc: "el creador original recibe el 20% (regalía perpetua)",
+  seller: "Revendedores",
+  sellerDesc: "ganan el 70% de cada reventa",
+  platform: "Plataforma",
+  platformDesc: "solo 10% para mantenimiento"
+},
+purchase: {
+  title: "Comprar obra",
+  price: "Precio",
+  distribution: "💰 Distribución del pago",
+  creator: "Creador",
+  platform: "Plataforma",
+  seller: "Vendedor actual",
+  originalCreator: "Creador original",
+  didYouKnow: "¿Sabías que?",
+  firstSaleInfo: "El creador recibe el 90% de esta venta. En reventas futuras, seguirá ganando el 20% de cada transacción.",
+  resaleInfo: "El creador original sigue recibiendo regalías por cada reventa futura. ¡Sus ingresos son perpetuos!",
+  processing: "Procesando...",
+  confirm: "Confirmar compra por",
+  cancel: "Cancelar",
+  loading: "Cargando...",
+  error: "Error al procesar el pago"
+},
+
 }
