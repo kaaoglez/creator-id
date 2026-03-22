@@ -16,6 +16,7 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
   const [visits, setVisits] = useState(0)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -38,6 +39,20 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
     }
   }, [work.id])
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  }
+
+  const truncateText = (text: string, maxLength: number = 80) => {
+    if (!text) return ''
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
+  }
+
   const registerVisit = async (e: React.MouseEvent) => {
     e.preventDefault()
     await supabase
@@ -48,8 +63,8 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
       }])
   }
 
-  const hasImage = work.file_url && work.file_type?.startsWith('image/')
-  const imageUrl = hasImage ? work.file_url : '/placeholder-image.jpg'
+  const hasImage = work.file_url && work.file_type?.startsWith('image/') && !imageError
+  const imageUrl = hasImage ? work.file_url : null
 
   const handleCardClick = async (e: React.MouseEvent) => {
     await registerVisit(e)
@@ -58,34 +73,31 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
 
   return (
     <div
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       style={{
-        border: '1px solid #eaeaea',
         background: 'white',
-        boxShadow: isHovered 
-          ? '0 10px 15px -3px rgba(0,0,0,0.1)'
-          : '0 1px 3px rgba(0,0,0,0.05)',
-        transition: 'all 0.2s ease',
-        transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
+        border: '1px solid #eaeaea',
+        borderRadius: '8px',
         overflow: 'hidden',
+        transition: 'all 0.2s',
+        boxShadow: isHovered ? '0 4px 15px rgba(0,0,0,0.1)' : '0 2px 5px rgba(0,0,0,0.05)',
+        transform: isHovered ? 'translateY(-2px)' : 'none',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%'
+        height: '100%',
+        cursor: 'pointer'
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleCardClick}
     >
-      {/* Imagen destacada - clickeable */}
-      <div
-        onClick={handleCardClick}
-        style={{
-          position: 'relative',
-          height: '200px',
-          background: '#f3f4f6',
-          overflow: 'hidden',
-          cursor: 'pointer'
-        }}
-      >
-        {hasImage ? (
+      {/* Imagen de la obra */}
+      <div style={{
+        height: '160px',
+        background: '#f5f5f5',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {imageUrl ? (
           <Image
             src={imageUrl}
             alt={work.title}
@@ -100,6 +112,7 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
               opacity: imageLoaded ? 1 : 0
             }}
             onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
             loading="lazy"
             quality={75}
           />
@@ -112,7 +125,7 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
             justifyContent: 'center',
             background: 'linear-gradient(135deg, #4f46e5, #10b981)',
             color: 'white',
-            fontSize: '3rem'
+            fontSize: '2rem'
           }}>
             🎨
           </div>
@@ -132,81 +145,144 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
           display: 'flex',
           alignItems: 'center',
           gap: '4px',
-          zIndex: 2
+          zIndex: 2,
+          borderRadius: '20px'
         }}>
           <span>👁️</span>
           <span>{visits}</span>
         </div>
       </div>
 
-      {/* Información de la obra */}
+      {/* Contenido */}
       <div style={{
-        padding: '16px',
-        flex: 1,
+        padding: '15px',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        flex: 1
       }}>
         <h3 style={{
-          margin: '0 0 8px 0',
           fontSize: '1.1rem',
+          margin: '0 0 8px 0',
+          color: '#333',
           fontWeight: 600,
-          color: '#1f2937',
-          lineHeight: 1.4,
+          height: '2.4rem',
           overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          lineHeight: '1.2'
         }}>
           {work.title}
         </h3>
 
-        {work.description && (
-          <p style={{
-            margin: '0 0 12px 0',
-            fontSize: '0.9rem',
-            color: '#6b7280',
-            lineHeight: 1.5,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
-            {work.description}
-          </p>
-        )}
+        <p style={{
+          fontSize: '0.9rem',
+          color: '#666',
+          marginBottom: '10px',
+          height: '4rem',
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 3,
+          WebkitBoxOrient: 'vertical',
+          lineHeight: '1.4'
+        }}>
+          {truncateText(work.description || 'Sin descripción', 120)}
+        </p>
 
-        {/* Fecha */}
         <div style={{
+          background: '#f9f9f9',
+          padding: '8px',
+          borderRadius: '4px',
+          marginBottom: '12px',
           fontSize: '0.8rem',
-          color: '#9ca3af',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          marginBottom: '8px'
+          color: '#666'
         }}>
-          <span>📅</span>
-          <span>{new Date(work.created_at).toLocaleDateString()}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span>📅 {formatDate(work.created_at)}</span>
+            {work.price && (
+              <span style={{ fontWeight: 'bold', color: '#4f46e5' }}>${work.price}</span>
+            )}
+          </div>
+          <code style={{
+            background: '#333',
+            color: '#0f0',
+            padding: '2px 4px',
+            fontSize: '0.7rem',
+            display: 'block',
+            textAlign: 'center',
+            wordBreak: 'break-all'
+          }}>
+            {work.file_hash?.substring(0, 16) || 'HASH'}...
+          </code>
         </div>
 
-        {/* Hash abreviado */}
-        <div style={{
-          padding: '6px 10px',
-          background: '#f3f4f6',
-          fontSize: '0.75rem',
-          fontFamily: 'monospace',
-          color: '#4f46e5',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
-        }}>
-          <span style={{ fontSize: '0.9rem' }}>🔐</span>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {work.file_hash.substring(0, 16)}...
-          </span>
-        </div>
-
-        {/* ✅ BOTONES DE ACCIÓN (cuando showActions es true) */}
-      {!showActions && (
+        {/* Botones de acción */}
+    {showActions ? (
+  <div style={{
+    display: 'flex',
+    gap: '8px',
+    marginTop: 'auto'
+  }}>
+    {/* Botón Editar - NARANJA, va a /works/{id}/edit */}
+    <Link
+      href={`/works/${work.id}/edit`}
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        flex: 1,
+        padding: '8px',
+        background: '#f59e0b',  // Naranja
+        color: 'white',
+        textDecoration: 'none',
+        textAlign: 'center',
+        fontSize: '0.9rem',
+        borderRadius: '4px',
+        cursor: 'pointer'
+      }}
+    >
+      ✏️ Editar
+    </Link>
+    
+    {/* Botón Ver - AZUL, va a /work/{id} */}
+    <Link
+      href={`/work/${work.id}`}
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        flex: 1,
+        padding: '8px',
+        background: '#4f46e5',  // Azul
+        color: 'white',
+        textDecoration: 'none',
+        textAlign: 'center',
+        fontSize: '0.9rem',
+        borderRadius: '4px',
+        cursor: 'pointer'
+      }}
+    >
+      👁️ Ver
+    </Link>
+    
+    {/* Botón Eliminar - ROJO */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        onDelete?.(work.id)
+      }}
+      style={{
+        flex: 1,
+        padding: '8px',
+        background: '#dc2626',  // Rojo
+        color: 'white',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '0.9rem',
+        fontWeight: 'bold',
+        borderRadius: '4px'
+      }}
+    >
+      🗑️
+    </button>
+  </div>
+) : (
   <div style={{
     marginTop: 'auto',
     paddingTop: '16px'
@@ -226,7 +302,7 @@ const WorkCard = memo(function WorkCard({ work, showActions = false, onDelete, t
         borderRadius: '4px'
       }}
     >
-      👁️ {t?.home?.viewDetails || 'Ver detalles'}
+      👁️ Ver detalles
     </Link>
   </div>
 )}
